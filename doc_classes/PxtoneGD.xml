@@ -19,13 +19,6 @@
 				Fades out the tune, with the fadeout lasting the specified seconds.
 			</description>
 		</method>
-        <method name="get_mix_rate" qualifiers="const">
-			<return type="int">
-			</return>
-			<description>
-				Get the current mix rate. Usually the same as the one from the [AudioServer].
-			</description>
-		</method>
 		<method name="get_tune_comment" qualifiers="const">
 			<return type="String">
 			</return>
