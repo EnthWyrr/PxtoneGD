@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="PxtoneGD" inherits="Node" version="3.3">
+	<brief_description>
+		Play pxtone music files.
+	</brief_description>
+	<description>
+		Play pxtone music files in Godot. Pxtone is a lightweight music format developed by Studio Pixel, known for games such as Cave Story.
+		You can use [b]pxtone Collage[/b] to make pxtone music files, but some alternatives such as the cross-platform [b]pxtone Collab[/b] also exist.
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="fadeout_tune">
+			<return type="void">
+			</return>
+			<argument index="0" name="seconds" type="float">
+			</argument>
+			<description>
+				Fades out the tune, with the fadeout lasting the specified seconds.
+			</description>
+		</method>
+        <method name="get_mix_rate" qualifiers="const">
+			<return type="int">
+			</return>
+			<description>
+				Get the current mix rate. Usually the same as the one from the [AudioServer].
+			</description>
+		</method>
+		<method name="get_tune_comment" qualifiers="const">
+			<return type="String">
+			</return>
+			<description>
+				Returns the tune's comment.
+			</description>
+		</method>
+		<method name="get_tune_name" qualifiers="const">
+			<return type="String">
+			</return>
+			<description>
+				Returns the tune's name.
+			</description>
+		</method>
+		<method name="is_playing" qualifiers="const">
+			<return type="bool">
+			</return>
+			<description>
+				Returns [code]true[/code] if the tune is playing.
+			</description>
+		</method>
+		<method name="load_tune">
+			<return type="int" enum="Error">
+			</return>
+			<argument index="0" name="tune_path" type="String">
+			</argument>
+			<description>
+				Load a .ptcop or .pttune file.
+			</description>
+		</method>
+		<method name="play">
+			<return type="void">
+			</return>
+			<description>
+				Plays the tune. Pretty self-explanatory.
+			</description>
+		</method>
+		<method name="stop">
+			<return type="void">
+			</return>
+			<description>
+				Stops the tune.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="channels" type="int" setter="set_channels" getter="get_channels" default="2">
+			Number of channels that pxtone will output to. Can be either 1 (Mono) or 2 (Stereo).
+		</member>
+		<member name="looping" type="bool" setter="set_loop" getter="get_loop" default="true">
+			Whenever the tune will loop.
+		</member>
+		<member name="volume" type="float" setter="set_volume" getter="get_volume" default="1.0">
+			Volume of the output.
+		</member>
+	</members>
+	<constants>
+	</constants>
+</class>
