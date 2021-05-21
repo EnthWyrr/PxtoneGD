@@ -78,7 +78,7 @@ bool PxtoneGD::mix(AudioFrame* p_buffer, int p_frames){
 			break;
 		default:
 			print_error("Invalid channel count.");
-			return false;;
+			return false;
 	}
 	return true;
 }
