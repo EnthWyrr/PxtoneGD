@@ -3,8 +3,8 @@
 
 #ifdef pxINCLUDE_OGGVORBIS
 
-#include <vorbis/codec.h>
-#include <vorbis/vorbisfile.h>
+#include "thirdparty/libvorbis/vorbis/codec.h"
+#include "thirdparty/libvorbis/vorbis/vorbisfile.h"
 
 #include "./pxtnPulse_Oggv.h"
 
@@ -89,19 +89,19 @@ bool pxtnPulse_Oggv::_SetInformation()
 	ovmem.size  = _size  ;
 
 	// set callback func.
-	ov_callbacks   oc; 
+	ov_callbacks   oc;
     oc.read_func  = _mread       ;
     oc.seek_func  = _mseek       ;
     oc.close_func = _mclose_dummy;
     oc.tell_func  = _mtell       ;
-  
+
 	OggVorbis_File vf;
-	
+
 	vorbis_info*  vi;
 
 	switch( ov_open_callbacks( &ovmem, &vf, NULL, 0, oc ) )
 	{
-	case OV_EREAD     : goto End; //{printf("A read from media returned an error.\n");exit(1);} 
+	case OV_EREAD     : goto End; //{printf("A read from media returned an error.\n");exit(1);}
 	case OV_ENOTVORBIS: goto End; //{printf("Bitstream is not Vorbis data. \n");exit(1);}
 	case OV_EVERSION  : goto End; //{printf("Vorbis version mismatch. \n");exit(1);}
 	case OV_EBADHEADER: goto End; //{printf("Invalid Vorbis bitstream header. \n");exit(1);}
@@ -115,7 +115,7 @@ bool pxtnPulse_Oggv::_SetInformation()
 	_ch      = vi->channels;
 	_sps2    = vi->rate    ;
 	_smp_num = (int32_t)ov_pcm_total( &vf, -1 );
-    
+
     // end.
     ov_clear( &vf );
 
@@ -180,7 +180,7 @@ pxtnERR pxtnPulse_Oggv::Decode( pxtnPulse_PCM * p_pcm ) const
 
 	OggVorbis_File vf;
 	vorbis_info*   vi;
-	ov_callbacks   oc; 
+	ov_callbacks   oc;
 
 	OVMEM ovmem;
 
@@ -193,10 +193,10 @@ pxtnERR pxtnPulse_Oggv::Decode( pxtnPulse_PCM * p_pcm ) const
     oc.seek_func  = _mseek       ;
     oc.close_func = _mclose_dummy;
     oc.tell_func  = _mtell       ;
-  
+
     switch( ov_open_callbacks( &ovmem, &vf, NULL, 0, oc ) )
 	{
-	case OV_EREAD     : res = pxtnERR_ogg; goto term; //{printf("A read from media returned an error.\n");exit(1);} 
+	case OV_EREAD     : res = pxtnERR_ogg; goto term; //{printf("A read from media returned an error.\n");exit(1);}
 	case OV_ENOTVORBIS: res = pxtnERR_ogg; goto term; //{printf("Bitstream is not Vorbis data. \n");exit(1);}
 	case OV_EVERSION  : res = pxtnERR_ogg; goto term; //{printf("Vorbis version mismatch. \n");exit(1);}
 	case OV_EBADHEADER: res = pxtnERR_ogg; goto term; //{printf("Invalid Vorbis bitstream header. \n");exit(1);}
@@ -205,7 +205,7 @@ pxtnERR pxtnPulse_Oggv::Decode( pxtnPulse_PCM * p_pcm ) const
     }
 
     vi    = ov_info( &vf,-1 );
-	
+
 	{
 	int32_t current_section;
 	char    pcmout[ 4096 ] = {0}; //take 4k out of the data segment, not the stack
@@ -231,7 +231,7 @@ pxtnERR pxtnPulse_Oggv::Decode( pxtnPulse_PCM * p_pcm ) const
 		while( ret );
 	}
 	}
-    
+
     // end.
     ov_clear( &vf );
 
