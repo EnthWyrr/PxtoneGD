@@ -31,8 +31,7 @@ PxtoneGD::PxtoneGD() {
 	pxtn->set_destination_quality(channels,mix_rate);
 	// AudioServer setup
 	AudioServer::get_singleton()->lock();
-	buffer_size = AudioServer::get_singleton()->thread_get_mix_buffer_size();
-	mix_buffer.resize(buffer_size);
+	mix_buffer.resize(AudioServer::get_singleton()->thread_get_mix_buffer_size());
 	AudioServer::get_singleton()->unlock();
 	AudioServer::get_singleton()->add_callback(_mix_audios, this);
 }
@@ -86,20 +85,21 @@ bool PxtoneGD::mix(AudioFrame* p_buffer, int p_frames){
 // Mix audio in audio thread
 void PxtoneGD::_mix_audio() {
 	if (playing) {
-		//mix_buffer.resize(buffer_size*channels);
 		AudioFrame *buffer = mix_buffer.ptrw();
 		int buffer_size = mix_buffer.size();
 		zeromem(buffer, buffer_size * sizeof(AudioFrame));
 
 		if (!mix(buffer,buffer_size)){
 			stop();
+			emit_signal("finished");
 			return;
 		}
 
 		// Output to AudioServer
+		int bus_index = AudioServer::get_singleton()->thread_find_bus_index(bus);
 		int channels = AudioServer::get_singleton()->get_channel_count();
 		for (int c = 0; c < channels; c++) {
-			AudioFrame *target = AudioServer::get_singleton()->thread_get_channel_mix_buffer(0, c);
+			AudioFrame *target = AudioServer::get_singleton()->thread_get_channel_mix_buffer(bus_index, c);
 			for (int i = 0; i < buffer_size; i++) {
 				target[i] += buffer[i];
 			}
@@ -208,6 +208,40 @@ void PxtoneGD::fadeout_tune(const float secs) {
 	pxtn->moo_set_fade(-1, secs);	// -1 fades out the tune
 }
 
+// Taken from AudioStreamPlayer (audio_stream_player.cpp)
+
+void PxtoneGD::set_bus(const StringName &p_bus) {
+
+	//if audio is active, must lock this
+	AudioServer::get_singleton()->lock();
+	bus = p_bus;
+	AudioServer::get_singleton()->unlock();
+}
+StringName PxtoneGD::get_bus() const {
+
+	for (int i = 0; i < AudioServer::get_singleton()->get_bus_count(); i++) {
+		if (AudioServer::get_singleton()->get_bus_name(i) == bus) {
+			return bus;
+		}
+	}
+	return "Master";
+}
+
+void PxtoneGD::_validate_property(PropertyInfo &property) const {
+
+	if (property.name == "bus") {
+
+		String options;
+		for (int i = 0; i < AudioServer::get_singleton()->get_bus_count(); i++) {
+			if (i > 0)
+				options += ",";
+			String name = AudioServer::get_singleton()->get_bus_name(i);
+			options += name;
+		}
+		property.hint_string = options;
+	}
+}
+
 void PxtoneGD::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("load_tune","tune_path"), &PxtoneGD::load_tune);
 	ClassDB::bind_method(D_METHOD("play"), &PxtoneGD::start); // play() is less confusing
@@ -222,8 +256,13 @@ void PxtoneGD::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_tune_name"), &PxtoneGD::get_tune_name);
 	ClassDB::bind_method(D_METHOD("get_tune_comment"), &PxtoneGD::get_tune_comment);
 	ClassDB::bind_method(D_METHOD("fadeout_tune","fadeout_secs"), &PxtoneGD::fadeout_tune);
+	ClassDB::bind_method(D_METHOD("set_bus", "bus"), &PxtoneGD::set_bus);
+	ClassDB::bind_method(D_METHOD("get_bus"), &PxtoneGD::get_bus);
 	// Properties
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "looping", PROPERTY_HINT_NONE), "set_loop", "get_loop");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "volume", PROPERTY_HINT_RANGE, "0,1"), "set_volume", "get_volume");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "channels", PROPERTY_HINT_RANGE, "1,2"), "set_channels", "get_channels");
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "bus", PROPERTY_HINT_ENUM, ""), "set_bus", "get_bus");
+	// Signals
+	ADD_SIGNAL(MethodInfo("finished"));
 }

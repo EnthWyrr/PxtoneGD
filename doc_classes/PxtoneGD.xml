@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="PxtoneGD" inherits="Node" version="3.3">
 	<brief_description>
-		Play pxtone music files.
+       Play pxtone music files.
 	</brief_description>
 	<description>
-		Play pxtone music files in Godot. Pxtone is a lightweight music format developed by Studio Pixel, known for games such as Cave Story.
+       Pxtone is a lightweight music format developed by Studio Pixel, known for games such as Cave Story.
 		You can use [b]pxtone Collage[/b] to make pxtone music files, but some alternatives such as the cross-platform [b]pxtone Collab[/b] also exist.
 	</description>
 	<tutorials>
@@ -65,6 +65,9 @@
 		</method>
 	</methods>
 	<members>
+		<member name="bus" type="String" setter="set_bus" getter="get_bus" default="&quot;Master&quot;">
+            Sets the audio bus that it will output to. Works the same as [AudioStreamPlayer].
+		</member>
 		<member name="channels" type="int" setter="set_channels" getter="get_channels" default="2">
 			Number of channels that pxtone will output to. Can be either 1 (Mono) or 2 (Stereo).
 		</member>
@@ -75,6 +78,13 @@
 			Volume of the output.
 		</member>
 	</members>
+	<signals>
+		<signal name="finished">
+			<description>
+                Emitted when the tune finished playing by itself (non-looped or via fade out).
+			</description>
+		</signal>
+	</signals>
 	<constants>
 	</constants>
 </class>

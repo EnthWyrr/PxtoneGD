@@ -36,6 +36,9 @@ class PxtoneGD : public Node
 		String get_tune_name() const;
 		String get_tune_comment() const;
 		void fadeout_tune(const float secs);
+		// Taken from AudioStreamPlayer
+		void set_bus(const StringName &p_bus);
+		StringName get_bus() const;
 
 	private:
 		static void _mix_audios(void *self) { reinterpret_cast<PxtoneGD *>(self)->_mix_audio(); }
@@ -43,14 +46,17 @@ class PxtoneGD : public Node
 		void _mix_audio();
 		pxtnService *pxtn;
 		Vector<AudioFrame>mix_buffer;
-		int buffer_size;
 		int channels;
 		int mix_rate;
 		bool playing;
 		bool looping;
 		float volume;
+		// Taken from AudioStreamPlayer
+		StringName bus;
+		void _bus_layout_changed();
 
 	protected:
+		void _validate_property(PropertyInfo &property) const;
 		static void _bind_methods();
 };
 
