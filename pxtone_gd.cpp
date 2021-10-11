@@ -115,35 +115,38 @@ Error PxtoneGD::load_tune(const String file_path) {
 	pxtn->tones_clear();
 	FileAccess *tune_file = FileAccess::open(file_path, FileAccess::READ, &load_error);
 	if (load_error != OK) {
-		memdelete(tune_file);
-		return load_error;
-	}
-	size_t file_len = tune_file->get_len();
-	Vector<uint8_t> file_buffer;
-	file_buffer.resize(file_len);
-	tune_file->get_buffer(file_buffer.ptrw(), file_len);
-	if (file_len <= 0) { // Invalid length.
-		load_error = ERR_FILE_CORRUPT;
 		goto finish;
 	}
-	if (!desc.set_memory_r(file_buffer.ptrw(),file_len)) {
-		load_error = ERR_INVALID_DATA;
-		goto finish;
-	}
-	pxtn_error = pxtn->read(&desc);
-	if (pxtn_error != pxtnOK) {
-		load_error = FAILED;	// Should I use another error code?
-		print_error("Pxtone error: " + String(pxtnError_get_string(pxtn_error)));
-		goto finish;
-	}
-	pxtn_error = pxtn->tones_ready();
-	if (pxtn_error != pxtnOK) {
-		load_error = FAILED;
-		print_error("Pxtone error: " + String(pxtnError_get_string(pxtn_error)));
-		goto finish;
+	else {
+		size_t file_len = tune_file->get_len();
+		Vector<uint8_t> file_buffer;
+		file_buffer.resize(file_len);
+		tune_file->get_buffer(file_buffer.ptrw(), file_len);
+		if (file_len <= 0) { // Invalid length.
+			load_error = ERR_FILE_CORRUPT;
+			goto finish;
+		}
+		if (!desc.set_memory_r(file_buffer.ptrw(),file_len)) {
+			load_error = ERR_INVALID_DATA;
+			goto finish;
+		}
+		pxtn_error = pxtn->read(&desc);
+		if (pxtn_error != pxtnOK) {
+			load_error = FAILED;	// Should I use another error code?
+			print_error("Pxtone error: " + String(pxtnError_get_string(pxtn_error)));
+			goto finish;
+		}
+		pxtn_error = pxtn->tones_ready();
+		if (pxtn_error != pxtnOK) {
+			load_error = FAILED;
+			print_error("Pxtone error: " + String(pxtnError_get_string(pxtn_error)));
+			goto finish;
+		}
 	}
 finish:
-	memdelete(tune_file);
+	if (tune_file) {
+		memdelete(tune_file);
+	}
 	return load_error;
 }
 
