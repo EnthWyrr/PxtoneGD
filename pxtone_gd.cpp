@@ -87,7 +87,7 @@ void PxtoneGD::_mix_audio() {
 	if (playing) {
 		AudioFrame *buffer = mix_buffer.ptrw();
 		int buffer_size = mix_buffer.size();
-		zeromem(buffer, buffer_size * sizeof(AudioFrame));
+		memset(buffer,0,buffer_size*sizeof(AudioFrame));
 
 		if (!mix(buffer,buffer_size)){
 			stop();
