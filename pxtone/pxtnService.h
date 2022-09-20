@@ -1,9 +1,8 @@
 ﻿#ifndef pxtnService_H
 #define pxtnService_H
 
-#include "./pxtn.h"
+#include "./pxtnData.h"
 
-#include "./pxtnDescriptor.h"
 #include "./pxtnPulse_NoiseBuilder.h"
 
 #include "./pxtnMax.h"
@@ -37,9 +36,10 @@ pxtnVOMITPREPARATION;
 
 class pxtnService;
 
+
 typedef bool (* pxtnSampledCallback)( void* user, const pxtnService* pxtn );
 
-class pxtnService
+class pxtnService: public pxtnData
 {
 private:
 	void operator = (const pxtnService& src){}
@@ -70,22 +70,22 @@ private:
 
 	int32_t _group_num;
 
-	pxtnERR _ReadVersion      ( pxtnDescriptor *p_doc, _enum_FMTVER *p_fmt_ver, uint16_t *p_exe_ver );
-	pxtnERR _ReadTuneItems    ( pxtnDescriptor *p_doc );
-	bool    _x1x_Project_Read ( pxtnDescriptor *p_doc );
+	pxtnERR _ReadVersion      ( void *desc, _enum_FMTVER *p_fmt_ver, uint16_t *p_exe_ver );
+	pxtnERR _ReadTuneItems    ( void* desc );
+	bool    _x1x_Project_Read ( void* desc );
 
-	pxtnERR _io_Read_Delay    ( pxtnDescriptor *p_doc );
-	pxtnERR _io_Read_OverDrive( pxtnDescriptor *p_doc );
-	pxtnERR _io_Read_Woice    ( pxtnDescriptor *p_doc, pxtnWOICETYPE type );
-	pxtnERR _io_Read_OldUnit  ( pxtnDescriptor *p_doc, int32_t ver        );
+	pxtnERR _io_Read_Delay    ( void* desc );
+	pxtnERR _io_Read_OverDrive( void* desc );
+	pxtnERR _io_Read_Woice    ( void* desc, pxtnWOICETYPE type );
+	pxtnERR _io_Read_OldUnit  ( void* desc, int32_t ver        );
 
-	bool    _io_assiWOIC_w    ( pxtnDescriptor *p_doc, int32_t idx          ) const;
-	pxtnERR _io_assiWOIC_r    ( pxtnDescriptor *p_doc );
-	bool    _io_assiUNIT_w    ( pxtnDescriptor *p_doc, int32_t idx          ) const;
-	pxtnERR _io_assiUNIT_r    ( pxtnDescriptor *p_doc );
+	bool    _io_assiWOIC_w    ( void* desc, int32_t idx          ) const;
+	pxtnERR _io_assiWOIC_r    ( void* desc );
+	bool    _io_assiUNIT_w    ( void* desc, int32_t idx          ) const;
+	pxtnERR _io_assiUNIT_r    ( void* desc );
 
-	bool    _io_UNIT_num_w    ( pxtnDescriptor *p_doc ) const;
-	pxtnERR _io_UNIT_num_r    ( pxtnDescriptor *p_doc, int32_t* p_num );
+	bool    _io_UNIT_num_w    ( void* desc ) const;
+	pxtnERR _io_UNIT_num_r    ( void* desc, int32_t* p_num );
 
 	bool _x3x_TuningKeyEvent  ();
 	bool _x3x_AddTuningEvent  ();
@@ -131,7 +131,7 @@ private:
 
 	pxtnERR _init           ( int32_t fix_evels_num, bool b_edit );
 	bool    _release        ();
-	pxtnERR _pre_count_event( pxtnDescriptor *p_doc, int32_t* p_count );
+	pxtnERR _pre_count_event( void* desc, int32_t* p_count );
 
 
 	void _moo_constructor();
@@ -139,8 +139,8 @@ private:
 	bool _moo_init       ();
 	bool _moo_release    ();
 
-	bool _moo_ResetVoiceOn( pxtnUnit *p_u, int32_t w ) const;
-	bool _moo_InitUnitTone();
+	bool _moo_ResetVoiceOn ( pxtnUnit *p_u, int32_t w ) const;
+	bool _moo_InitUnitTone ();
 	bool _moo_PXTONE_SAMPLE( void *p_data );
 
 	pxtnSampledCallback _sampled_proc;
@@ -148,7 +148,7 @@ private:
 
 public :
 
-	 pxtnService();
+	 pxtnService( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos );
 	~pxtnService();
 
 	pxtnText    *text  ;
@@ -159,8 +159,8 @@ public :
 	pxtnERR init_collage ( int32_t fix_evels_num );
 	bool    clear        ();
 
-	pxtnERR write        ( pxtnDescriptor *p_doc, bool bTune, uint16_t exe_ver );
-	pxtnERR read         ( pxtnDescriptor *p_doc );
+	pxtnERR write        ( void* desc, bool bTune, uint16_t exe_ver );
+	pxtnERR read         ( void* desc );
 
 	bool    AdjustMeasNum();
 
@@ -195,7 +195,7 @@ public :
 	const pxtnWoice* Woice_Get         ( int32_t idx ) const;
 	pxtnWoice*       Woice_Get_variable( int32_t idx );
 
-	pxtnERR Woice_read     ( int32_t idx, pxtnDescriptor* desc, pxtnWOICETYPE type );
+	pxtnERR Woice_read     ( int32_t idx, void* desc, pxtnWOICETYPE type );
 	pxtnERR Woice_ReadyTone( int32_t idx );
 	bool    Woice_Remove   ( int32_t idx );
 	bool    Woice_Replace  ( int32_t old_place, int32_t new_place );

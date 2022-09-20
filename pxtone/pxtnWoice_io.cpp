@@ -22,7 +22,7 @@ typedef struct
 }
 _MATERIALSTRUCT_PCM;
 
-bool pxtnWoice::io_matePCM_w( pxtnDescriptor *p_doc ) const
+bool pxtnWoice::io_matePCM_w( void* desc ) const
 {
 	const pxtnPulse_PCM* p_pcm =  _voices[ 0 ].p_pcm;
 	pxtnVOICEUNIT*       p_vc  = &_voices[ 0 ];
@@ -40,21 +40,22 @@ bool pxtnWoice::io_matePCM_w( pxtnDescriptor *p_doc ) const
 	pcm.basic_key   = (uint16_t)p_vc->basic_key  ;
 
 	uint32_t size = sizeof( _MATERIALSTRUCT_PCM ) + pcm.data_size;
-	if( !p_doc->w_asfile( &size, sizeof(uint32_t           ), 1 ) ) return false;
-	if( !p_doc->w_asfile( &pcm , sizeof(_MATERIALSTRUCT_PCM), 1 ) ) return false;
-	if( !p_doc->w_asfile( p_pcm->get_p_buf(), 1, pcm.data_size  ) ) return false;
+
+	if( !_io_write( desc, &size, sizeof(uint32_t           ), 1 ) ) return false;
+	if( !_io_write( desc, &pcm , sizeof(_MATERIALSTRUCT_PCM), 1 ) ) return false;
+	if( !_io_write( desc, p_pcm->get_p_buf(), 1, pcm.data_size  ) ) return false;
 
 	return true;
 }
 
-pxtnERR pxtnWoice::io_matePCM_r( pxtnDescriptor *p_doc )
+pxtnERR pxtnWoice::io_matePCM_r( void* desc )
 {
 	pxtnERR             res  = pxtnERR_VOID;
 	_MATERIALSTRUCT_PCM pcm  = {0};
 	int32_t             size =  0 ;
 
-	if( !p_doc->r( &size, 4,                            1 ) ) return pxtnERR_desc_r;
-	if( !p_doc->r( &pcm, sizeof( _MATERIALSTRUCT_PCM ), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &size,                             4, 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &pcm , sizeof( _MATERIALSTRUCT_PCM ), 1 ) ) return pxtnERR_desc_r;
 
 	if( ((int32_t)pcm.voice_flags) & PTV_VOICEFLAG_UNCOVERED )return pxtnERR_fmt_unknown;
 
@@ -65,10 +66,10 @@ pxtnERR pxtnWoice::io_matePCM_r( pxtnDescriptor *p_doc )
 
 		p_vc->type = pxtnVOICE_Sampling;
 
-		res = p_vc->p_pcm->Create( pcm.ch, pcm.sps, pcm.bps, pcm.data_size / ( pcm.bps / 8 * pcm.ch ) );
+		res   = p_vc->p_pcm->Create( pcm.ch, pcm.sps, pcm.bps, pcm.data_size / ( pcm.bps / 8 * pcm.ch ) );
 		if( res != pxtnOK ) goto term;
-		if( !p_doc->r( p_vc->p_pcm->get_p_buf_variable(), 1, pcm.data_size ) ){ res = pxtnERR_desc_r; goto term; }
-		_type      = pxtnWOICE_PCM;
+		if( !_io_read( desc, p_vc->p_pcm->get_p_buf_variable(), 1, pcm.data_size ) ){ res = pxtnERR_desc_r; goto term; }
+		_type = pxtnWOICE_PCM;
 
 		p_vc->voice_flags = pcm.voice_flags;
 		p_vc->basic_key   = pcm.basic_key  ;
@@ -100,7 +101,7 @@ typedef struct
 }
 _MATERIALSTRUCT_PTN;
 
-bool pxtnWoice::io_matePTN_w( pxtnDescriptor *p_doc ) const
+bool pxtnWoice::io_matePTN_w( void* desc ) const
 {
 	_MATERIALSTRUCT_PTN ptn ;
 	pxtnVOICEUNIT*      p_vc;
@@ -117,26 +118,29 @@ bool pxtnWoice::io_matePTN_w( pxtnDescriptor *p_doc ) const
 	ptn.rrr         =                           1;
 
 	// pre
-	if( !p_doc->w_asfile( &size, sizeof(int32_t),             1 ) ) return false;
-	if( !p_doc->w_asfile( &ptn,  sizeof(_MATERIALSTRUCT_PTN), 1 ) ) return false;
+	if( !_io_write( desc, &size, sizeof(int32_t),             1 ) ) return false;
+	if( !_io_write( desc, &ptn,  sizeof(_MATERIALSTRUCT_PTN), 1 ) ) return false;
+
 	size += sizeof(_MATERIALSTRUCT_PTN);
-	if( !p_vc->p_ptn->write( p_doc, &size )                       ) return false;
-	if( !p_doc->seek( pxtnSEEK_cur, -size - sizeof(int32_t) )     ) return false;
-	if( !p_doc->w_asfile( &size, sizeof(int32_t),             1 ) ) return false;
-	if( !p_doc->seek( pxtnSEEK_cur, size )                        ) return false;
+
+	if( !p_vc->p_ptn->write( desc, &size )                        ) return false;
+
+	if( !_io_seek ( desc, SEEK_CUR, -size -sizeof(int32_t) )      ) return false;
+	if( !_io_write( desc, &size, sizeof(int32_t),             1 ) ) return false;
+	if( !_io_seek ( desc, SEEK_CUR,  size                  )      ) return false;
 
 	return true;
 }
 
 
-pxtnERR pxtnWoice::io_matePTN_r( pxtnDescriptor *p_doc )
+pxtnERR pxtnWoice::io_matePTN_r( void* desc )
 {
 	pxtnERR             res  = pxtnERR_VOID; 
 	_MATERIALSTRUCT_PTN ptn  = {0};
 	int32_t             size =  0 ;
 
-	if( !p_doc->r( &size, sizeof(int32_t),               1 ) ) return pxtnERR_desc_r;
-	if( !p_doc->r( &ptn,  sizeof( _MATERIALSTRUCT_PTN ), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &size, sizeof(int32_t            ), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &ptn,  sizeof(_MATERIALSTRUCT_PTN), 1 ) ) return pxtnERR_desc_r;
 
 	if     ( ptn.rrr > 1 ) return pxtnERR_fmt_unknown;
 	else if( ptn.rrr < 0 ) return pxtnERR_fmt_unknown;
@@ -147,11 +151,14 @@ pxtnERR pxtnWoice::io_matePTN_r( pxtnDescriptor *p_doc )
 		pxtnVOICEUNIT *p_vc = &_voices[ 0 ];
 
 		p_vc->type = pxtnVOICE_Noise;
-		res = p_vc->p_ptn->read( p_doc ); if( res != pxtnOK ) goto term;
+
+		res = p_vc->p_ptn->read( desc ); if( res != pxtnOK ) goto term;
+
 		_type = pxtnWOICE_PTN;
-		p_vc->voice_flags  = ptn.voice_flags;
-		p_vc->basic_key    = ptn.basic_key  ;
-		p_vc->tuning       = ptn.tuning     ;
+
+		p_vc->voice_flags = ptn.voice_flags;
+		p_vc->basic_key   = ptn.basic_key  ;
+		p_vc->tuning      = ptn.tuning     ;
 	}
 
 	_x3x_basic_key = ptn.basic_key;
@@ -177,11 +184,11 @@ typedef struct
 }
 _MATERIALSTRUCT_PTV;
 
-bool pxtnWoice::io_matePTV_w( pxtnDescriptor *p_doc ) const
+bool pxtnWoice::io_matePTV_w( void* desc ) const
 {
 	_MATERIALSTRUCT_PTV ptv;
-	int32_t                 head_size = sizeof(_MATERIALSTRUCT_PTV) + sizeof(int32_t);
-	int32_t                 size = 0;
+	int32_t             head_size = sizeof(_MATERIALSTRUCT_PTV) + sizeof(int32_t);
+	int32_t             size      = 0;
 
 	// ptv -------------------------
 	memset( &ptv, 0, sizeof( _MATERIALSTRUCT_PTV ) );
@@ -190,31 +197,35 @@ bool pxtnWoice::io_matePTV_w( pxtnDescriptor *p_doc ) const
 	ptv.size        =           0;
 
 	// pre write
-	if( !p_doc->w_asfile( &size, sizeof(int32_t),             1 ) ) return false;
-	if( !p_doc->w_asfile( &ptv,  sizeof(_MATERIALSTRUCT_PTV), 1 ) ) return false;
-	if( !PTV_Write( p_doc, &ptv.size )       ) return false;
+	if( !_io_write( desc, &size, sizeof(int32_t),             1 ) ) return false;
+	if( !_io_write( desc, &ptv,  sizeof(_MATERIALSTRUCT_PTV), 1 ) ) return false;
 
-	if( !p_doc->seek( pxtnSEEK_cur, -( ptv.size + head_size ) ) ) return false;
+	if( !PTV_Write( desc, &ptv.size ) ) return false;
+
+	if( !_io_seek( desc, SEEK_CUR, -( ptv.size + head_size ) ) ) return false;
 
 	size = ptv.size +  sizeof(_MATERIALSTRUCT_PTV);
-	if( !p_doc->w_asfile( &size, sizeof(int32_t),             1 ) ) return false;
-	if( !p_doc->w_asfile( &ptv,  sizeof(_MATERIALSTRUCT_PTV), 1 ) ) return false;
 
-	if( !p_doc->seek( pxtnSEEK_cur, ptv.size )                    ) return false;
+	if( !_io_write( desc, &size, sizeof(int32_t),             1 ) ) return false;
+	if( !_io_write( desc, &ptv,  sizeof(_MATERIALSTRUCT_PTV), 1 ) ) return false;
+
+	if( !_io_seek ( desc, SEEK_CUR, ptv.size ) ) return false;
 
 	return true;
 }
 
-pxtnERR pxtnWoice::io_matePTV_r( pxtnDescriptor *p_doc )
+pxtnERR pxtnWoice::io_matePTV_r( void* desc )
 {
 	pxtnERR             res  = pxtnERR_VOID;
 	_MATERIALSTRUCT_PTV ptv  = {0};
 	int32_t             size =  0 ;
 
-	if( !p_doc->r( &size, sizeof(int32_t),               1 ) ) return pxtnERR_desc_r;
-	if( !p_doc->r( &ptv,  sizeof( _MATERIALSTRUCT_PTV ), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &size, sizeof(int32_t              ), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &ptv,  sizeof( _MATERIALSTRUCT_PTV ), 1 ) ) return pxtnERR_desc_r;
+
 	if( ptv.rrr ) return pxtnERR_fmt_unknown;
-	res = PTV_Read( p_doc ); if( res != pxtnOK ) goto term;
+
+	res = PTV_Read( desc ); if( res != pxtnOK ) goto term;
 
 	if( ptv.x3x_tuning != 1.0 ) _x3x_tuning = ptv.x3x_tuning;
 	else                        _x3x_tuning =              0;
@@ -242,7 +253,7 @@ typedef struct
 }
 _MATERIALSTRUCT_OGGV;
 
-bool pxtnWoice::io_mateOGGV_w( pxtnDescriptor *p_doc ) const
+bool pxtnWoice::io_mateOGGV_w( void* desc ) const
 {
 	if( !_voices ) return false;
 
@@ -258,21 +269,23 @@ bool pxtnWoice::io_mateOGGV_w( pxtnDescriptor *p_doc ) const
 	mate.basic_key   = (uint16_t)p_vc->basic_key  ;
 
 	uint32_t size = sizeof( _MATERIALSTRUCT_OGGV ) + oggv_size;
-	if( !p_doc->w_asfile( &size, sizeof(uint32_t)            , 1 ) ) return false;
-	if( !p_doc->w_asfile( &mate, sizeof(_MATERIALSTRUCT_OGGV), 1 ) ) return false;
-	if( !p_vc->p_oggv->pxtn_write( p_doc ) ) return false;
+
+	if( !_io_write( desc, &size, sizeof(uint32_t)            , 1 ) ) return false;
+	if( !_io_write( desc, &mate, sizeof(_MATERIALSTRUCT_OGGV), 1 ) ) return false;
+
+	if( !p_vc->p_oggv->pxtn_write( desc ) ) return false;
 
 	return true;
 }
 
-pxtnERR pxtnWoice::io_mateOGGV_r( pxtnDescriptor *p_doc )
+pxtnERR pxtnWoice::io_mateOGGV_r( void* desc )
 {
 	pxtnERR              res  = pxtnERR_VOID;
-	_MATERIALSTRUCT_OGGV mate = {0};
-	int32_t              size =  0 ;
+	_MATERIALSTRUCT_OGGV mate = {};
+	int32_t              size =  0;
 
-	if( !p_doc->r( &size, 4,                              1 ) ) return pxtnERR_desc_r;
-	if( !p_doc->r( &mate, sizeof( _MATERIALSTRUCT_OGGV ), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &size, 4,                              1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &mate, sizeof( _MATERIALSTRUCT_OGGV ), 1 ) ) return pxtnERR_desc_r;
 
 	if( ((int32_t)mate.voice_flags) & PTV_VOICEFLAG_UNCOVERED ) return pxtnERR_fmt_unknown;
 
@@ -280,9 +293,10 @@ pxtnERR pxtnWoice::io_mateOGGV_r( pxtnDescriptor *p_doc )
 
 	{
 		pxtnVOICEUNIT *p_vc = &_voices[ 0 ];
+
 		p_vc->type = pxtnVOICE_OggVorbis;
 
-		if( !p_vc->p_oggv->pxtn_read( p_doc ) ) goto End;
+		if( !p_vc->p_oggv->pxtn_read( desc ) ) goto End;
 
 		p_vc->voice_flags  = mate.voice_flags;
 		p_vc->basic_key    = mate.basic_key  ;

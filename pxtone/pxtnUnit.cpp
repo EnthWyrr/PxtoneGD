@@ -5,8 +5,9 @@
 #include "./pxtnUnit.h"
 #include "./pxtnEvelist.h"
 
-pxtnUnit::pxtnUnit()
+pxtnUnit::pxtnUnit( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos )
 {
+	_set_io_funcs( io_read, io_write, io_seek, io_pos );
 	_bPlayed   = true;
 	_bOperated = true;
 	strcpy( _name_buf, "no name" );
@@ -311,14 +312,14 @@ typedef struct
 }
 _x1x_UNIT;
 
-bool pxtnUnit::Read_v1x( pxtnDescriptor *p_doc, int32_t *p_group )
+bool pxtnUnit::Read_v1x( void* desc, int32_t *p_group )
 {
 	_x1x_UNIT unit;
 	int32_t   size;
 
-	if( !p_doc->r( &size, 4,                   1 ) ) return false;
-	if( !p_doc->r( &unit, sizeof( _x1x_UNIT ), 1 ) ) return false;
-	if( (pxtnWOICETYPE)unit.type != pxtnWOICE_PCM  ) return false;
+	if( !_io_read( desc, &size, 4,                   1 ) ) return false;
+	if( !_io_read( desc, &unit, sizeof( _x1x_UNIT ), 1 ) ) return false;
+	if( (pxtnWOICETYPE)unit.type != pxtnWOICE_PCM        ) return false;
 
 	memcpy( _name_buf, unit.name, pxtnMAX_TUNEUNITNAME ); _name_buf[ pxtnMAX_TUNEUNITNAME ] = '\0';
 	*p_group = unit.group;
@@ -336,13 +337,13 @@ typedef struct
 }
 _x3x_UNIT;
 
-pxtnERR pxtnUnit::Read_v3x( pxtnDescriptor *p_doc, int32_t *p_group )
+pxtnERR pxtnUnit::Read_v3x( void* desc, int32_t *p_group )
 {
 	_x3x_UNIT unit = {0};
 	int32_t   size =  0 ;
 
-	if( !p_doc->r( &size, 4,                   1 ) ) return pxtnERR_desc_r;
-	if( !p_doc->r( &unit, sizeof( _x3x_UNIT ), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &size, 4,                   1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &unit, sizeof( _x3x_UNIT ), 1 ) ) return pxtnERR_desc_r;
 	if( (pxtnWOICETYPE)unit.type != pxtnWOICE_PCM &&
 		(pxtnWOICETYPE)unit.type != pxtnWOICE_PTV &&
 		(pxtnWOICETYPE)unit.type != pxtnWOICE_PTN ) return pxtnERR_fmt_unknown;

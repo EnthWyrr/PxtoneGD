@@ -3,9 +3,7 @@
 #ifndef pxtnOverDrive_H
 #define pxtnOverDrive_H
 
-#include "./pxtn.h"
-
-#include "./pxtnDescriptor.h"
+#include "./pxtnData.h"
 
 #define TUNEOVERDRIVE_CUT_MAX      99.9f
 #define TUNEOVERDRIVE_CUT_MIN      50.0f
@@ -14,7 +12,7 @@
 #define TUNEOVERDRIVE_DEFAULT_CUT  90.0f
 #define TUNEOVERDRIVE_DEFAULT_AMP   2.0f
 
-class pxtnOverDrive
+class pxtnOverDrive: public pxtnData
 {
 private:
 	void operator = (const pxtnOverDrive& src){}
@@ -29,14 +27,14 @@ private:
 	int32_t   _cut_16bit_top;
 public :
 
-	 pxtnOverDrive();
+	 pxtnOverDrive( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos );
 	~pxtnOverDrive();
 
 	void Tone_Ready();
 	void Tone_Supple( int32_t *group_smps ) const;
 
-	bool    Write( pxtnDescriptor *p_doc ) const;
-	pxtnERR Read ( pxtnDescriptor *p_doc );
+	bool    Write( void* desc ) const;
+	pxtnERR Read ( void* desc );
 
 
 	float   get_cut  ()const;

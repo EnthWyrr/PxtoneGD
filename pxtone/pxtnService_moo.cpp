@@ -45,7 +45,7 @@ bool pxtnService::_moo_init()
 {
 	bool b_ret = false;
 
-	if( !(_moo_freq = new pxtnPulse_Frequency()) ||  !_moo_freq->Init() ) goto term;
+	if( !(_moo_freq = new pxtnPulse_Frequency( _io_read, _io_write, _io_seek, _io_pos ) ) ||  !_moo_freq->Init() ) goto term;
 	if( !pxtnMem_zero_alloc( (void **)&_moo_group_smps, sizeof(int32_t) * _group_num ) ) goto term;
 
 	_moo_b_init = true;

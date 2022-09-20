@@ -2,7 +2,6 @@
 #include "./pxtn.h"
 
 #include "./pxtnMem.h"
-#include "./pxtnDescriptor.h"
 #include "./pxtnPulse_PCM.h"
 
 typedef struct
@@ -28,8 +27,9 @@ void pxtnPulse_PCM::Release()
 	_smp_tail =    0;
 }
 
-pxtnPulse_PCM::pxtnPulse_PCM()
+pxtnPulse_PCM::pxtnPulse_PCM( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos )
 {
+	_set_io_funcs( io_read, io_write, io_seek, io_pos );
 	_p_smp    = NULL;
 	Release();
 }
@@ -74,7 +74,7 @@ pxtnERR pxtnPulse_PCM::Create( int32_t ch, int32_t sps, int32_t bps, int32_t sam
 	return pxtnOK;
 }
 
-pxtnERR pxtnPulse_PCM::read( pxtnDescriptor* doc )
+pxtnERR pxtnPulse_PCM::read( void* desc )
 {
 	pxtnERR        res       = pxtnERR_VOID;
 	char            buf[ 16 ] = { 0 };
@@ -84,7 +84,7 @@ pxtnERR pxtnPulse_PCM::read( pxtnDescriptor* doc )
 	_p_smp = NULL;
 
 	// 'RIFFxxxxWAVEfmt '
-	if( !doc->r( buf, sizeof(char), 16 ) ){ res = pxtnERR_desc_r; goto term; }
+	if( !_io_read( desc, buf, sizeof(char), 16 ) ){ res = pxtnERR_desc_r; goto term; }
 
 	if( buf[ 0] != 'R' || buf[ 1] != 'I' || buf[ 2] != 'F' || buf[ 3] != 'F' ||
 		buf[ 8] != 'W' || buf[ 9] != 'A' || buf[10] != 'V' || buf[11] != 'E' ||
@@ -94,28 +94,28 @@ pxtnERR pxtnPulse_PCM::read( pxtnDescriptor* doc )
 	}
 
 	// read format.
-	if( !doc->r( &size  , sizeof(uint32_t), 1 ) ){ res = pxtnERR_desc_r     ; goto term; }
-	if( !doc->r( &format,               18, 1 ) ){ res = pxtnERR_desc_r     ; goto term; }
+	if( !_io_read( desc ,&size  , sizeof(uint32_t), 1 ) ){ res = pxtnERR_desc_r     ; goto term; }
+	if( !_io_read( desc, &format,               18, 1 ) ){ res = pxtnERR_desc_r     ; goto term; }
 	
 	if( format.formatID != 0x0001               ){ res = pxtnERR_pcm_unknown; goto term; }
 	if( format.ch  != 1 && format.ch  !=  2     ){ res = pxtnERR_pcm_unknown; goto term; }
 	if( format.bps != 8 && format.bps != 16     ){ res = pxtnERR_pcm_unknown; goto term; }
 
 	// find 'data'
-	if( !doc->seek( pxtnSEEK_set, 12 ) ){ res = pxtnERR_desc_r; goto term; } // skip 'RIFFxxxxWAVE'
+	if( !_io_seek( desc, SEEK_SET, 12 ) ){ res = pxtnERR_desc_r; goto term; } // skip 'RIFFxxxxWAVE'
 
 	while( 1 )
 	{
-		if( !doc->r( buf  , sizeof(char), 4 )      ){ res = pxtnERR_desc_r; goto term; }
-		if( !doc->r( &size, sizeof(uint32_t ), 1 ) ){ res = pxtnERR_desc_r; goto term; }
+		if( !_io_read( desc, buf  , sizeof(char), 4 )      ){ res = pxtnERR_desc_r; goto term; }
+		if( !_io_read( desc, &size, sizeof(uint32_t ), 1 ) ){ res = pxtnERR_desc_r; goto term; }
 		if( buf[0] == 'd' && buf[1] == 'a' && buf[2] == 't' && buf[3] == 'a' ) break;
-		if( !doc->seek( pxtnSEEK_cur, size )       ){ res = pxtnERR_desc_r; goto term; }
+		if( !_io_seek( desc, SEEK_CUR, size )              ){ res = pxtnERR_desc_r; goto term; }
 	}
 
 	res = Create( format.ch, format.sps, format.bps, size * 8 / format.bps / format.ch );
 	if( res != pxtnOK ) goto term;
 
-	if( !doc->r( _p_smp, sizeof(uint8_t), size )   ){ res = pxtnERR_desc_r; goto term; }
+	if( !_io_read( desc, _p_smp, sizeof(uint8_t), size )   ){ res = pxtnERR_desc_r; goto term; }
 
 	res = pxtnOK;
 term:
@@ -124,7 +124,7 @@ term:
 	return res;
 }
 
-bool pxtnPulse_PCM::write  ( pxtnDescriptor* doc, const char* pstrLIST ) const
+bool pxtnPulse_PCM::write  ( void* desc, const char* pstrLIST ) const
 {
 	if( !_p_smp ) return false;
 
@@ -181,26 +181,26 @@ bool pxtnPulse_PCM::write  ( pxtnDescriptor* doc, const char* pstrLIST ) const
 
 	// open file..
 
-	if( !doc->w_asfile( tag_RIFF,     sizeof(char    ), 4 ) ) goto End;
-	if( !doc->w_asfile( &riff_size,   sizeof(uint32_t), 1 ) ) goto End;
-	if( !doc->w_asfile( tag_WAVE,     sizeof(char    ), 4 ) ) goto End;
-	if( !doc->w_asfile( tag_fmt_,     sizeof(char    ), 8 ) ) goto End;
-	if( !doc->w_asfile( &format,                    18, 1 ) ) goto End;
+	if( !_io_write( desc, tag_RIFF,     sizeof(char    ), 4 ) ) goto End;
+	if( !_io_write( desc, &riff_size,   sizeof(uint32_t), 1 ) ) goto End;
+	if( !_io_write( desc, tag_WAVE,     sizeof(char    ), 4 ) ) goto End;
+	if( !_io_write( desc, tag_fmt_,     sizeof(char    ), 8 ) ) goto End;
+	if( !_io_write( desc, &format,                    18, 1 ) ) goto End;
 		
 	if( bText )
 	{
-		if( !doc->w_asfile( tag_LIST,     sizeof(char    ), 4 ) ) goto End;
-		if( !doc->w_asfile( &list_size,   sizeof(uint32_t), 1 ) ) goto End;
-		if( !doc->w_asfile( tag_INFO,     sizeof(char    ), 8 ) ) goto End;
-		if( !doc->w_asfile( &isft_size,   sizeof(uint32_t), 1 ) ) goto End;
-		if( !doc->w_asfile( pstrLIST,     sizeof(char    ), isft_size ) ) goto End;
+		if( !_io_write( desc, tag_LIST,     sizeof(char    ), 4 ) ) goto End;
+		if( !_io_write( desc, &list_size,   sizeof(uint32_t), 1 ) ) goto End;
+		if( !_io_write( desc, tag_INFO,     sizeof(char    ), 8 ) ) goto End;
+		if( !_io_write( desc, &isft_size,   sizeof(uint32_t), 1 ) ) goto End;
+		if( !_io_write( desc, pstrLIST,     sizeof(char    ), isft_size ) ) goto End;
 	}
 															   
-	if( !doc->w_asfile( tag_fact,     sizeof(char    ), 8 ) ) goto End;
-	if( !doc->w_asfile( &fact_size,   sizeof(uint32_t), 1 ) ) goto End;
-	if( !doc->w_asfile( tag_data,     sizeof(char    ), 4 ) ) goto End;
-	if( !doc->w_asfile( &sample_size, sizeof(int32_t ), 1 ) ) goto End;
-	if( !doc->w_asfile( _p_smp, sizeof(char), sample_size ) ) goto End;
+	if( !_io_write( desc, tag_fact,     sizeof(char    ), 8 ) ) goto End;
+	if( !_io_write( desc, &fact_size,   sizeof(uint32_t), 1 ) ) goto End;
+	if( !_io_write( desc, tag_data,     sizeof(char    ), 4 ) ) goto End;
+	if( !_io_write( desc, &sample_size, sizeof(int32_t ), 1 ) ) goto End;
+	if( !_io_write( desc, _p_smp, sizeof(char), sample_size ) ) goto End;
 
 	b_ret = true;
 
@@ -520,13 +520,16 @@ bool pxtnPulse_PCM::Convert_Volume( float v )
 	return true;
 }
 
-pxtnERR pxtnPulse_PCM::Copy( pxtnPulse_PCM *p_dst ) const
+bool pxtnPulse_PCM::copy_from( const pxtnPulse_PCM *src )
 {
+	pxtnData::copy_from( src );
+
 	pxtnERR res = pxtnERR_VOID;
-	if( !_p_smp ){ p_dst->Release(); return pxtnOK; }
-	res = p_dst->Create( _ch, _sps, _bps, _smp_body ); if( res != pxtnOK ) return res;
-	memcpy( p_dst->_p_smp, _p_smp, ( _smp_head + _smp_body + _smp_tail ) * _ch * _bps / 8 );
-	return pxtnOK;
+	if( !src->_p_smp ){ Release(); return true; }
+	res = Create( src->_ch, src->_sps, src->_bps, src->_smp_body );
+	if( res != pxtnOK ) return false;
+	memcpy( _p_smp, src->_p_smp, ( src->_smp_head + src->_smp_body + src->_smp_tail ) * src->_ch * src->_bps / 8 );
+	return true;
 }
 
 bool pxtnPulse_PCM::Copy_( pxtnPulse_PCM *p_dst, int32_t start, int32_t end ) const

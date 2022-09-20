@@ -33,8 +33,10 @@ pxNOISEDESIGN_UNIT *pxtnPulse_Noise::get_unit( int32_t u )
 }
 
 
-pxtnPulse_Noise::pxtnPulse_Noise()
+pxtnPulse_Noise::pxtnPulse_Noise( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos )
 {
+	_set_io_funcs( io_read, io_write, io_seek, io_pos );
+
 	_units       = NULL;
 	_unit_num    =    0;
 	_smp_num_44k =    0;
@@ -110,31 +112,31 @@ static const char *_code = "PTNOISE-";
 //                    _ver =  20051028 ; -v.0.9.2.3
 static const uint32_t _ver =  20120418 ; // 16 wave types.
 
-static bool _WriteOscillator( const pxNOISEDESIGN_OSCILLATOR *p_osc, pxtnDescriptor *p_doc, int32_t *p_add )
+bool pxtnPulse_Noise::_WriteOscillator( const pxNOISEDESIGN_OSCILLATOR *p_osc, void* desc, int32_t *p_add ) const
 {
 	int32_t work;
-	work = (int32_t) p_osc->type        ; if( !p_doc->v_w_asfile( work, p_add ) ) return false;
-	work = (int32_t) p_osc->b_rev       ; if( !p_doc->v_w_asfile( work, p_add ) ) return false;
-	work = (int32_t)(p_osc->freq   * 10); if( !p_doc->v_w_asfile( work, p_add ) ) return false;
-	work = (int32_t)(p_osc->volume * 10); if( !p_doc->v_w_asfile( work, p_add ) ) return false;
-	work = (int32_t)(p_osc->offset * 10); if( !p_doc->v_w_asfile( work, p_add ) ) return false;
+	work = (int32_t) p_osc->type        ; if( !_data_w_v( desc, work, p_add ) ) return false;
+	work = (int32_t) p_osc->b_rev       ; if( !_data_w_v( desc, work, p_add ) ) return false;
+	work = (int32_t)(p_osc->freq   * 10); if( !_data_w_v( desc, work, p_add ) ) return false;
+	work = (int32_t)(p_osc->volume * 10); if( !_data_w_v( desc, work, p_add ) ) return false;
+	work = (int32_t)(p_osc->offset * 10); if( !_data_w_v( desc, work, p_add ) ) return false;
 	return true;
 }
 
-static pxtnERR _ReadOscillator( pxNOISEDESIGN_OSCILLATOR *p_osc, pxtnDescriptor *p_doc )
+pxtnERR pxtnPulse_Noise::_ReadOscillator( pxNOISEDESIGN_OSCILLATOR *p_osc, void* desc )
 {
 	int32_t work;
-	if( !p_doc->v_r( &work )          ) return pxtnERR_desc_r     ; p_osc->type     = (pxWAVETYPE)work;
+	if( !_data_r_v( desc, &work )     ) return pxtnERR_desc_r     ; p_osc->type     = (pxWAVETYPE)work;
 	if( p_osc->type >= pxWAVETYPE_num ) return pxtnERR_fmt_unknown;
-	if( !p_doc->v_r( &work )          ) return pxtnERR_desc_r     ; p_osc->b_rev    = work ? true : false;
-	if( !p_doc->v_r( &work )          ) return pxtnERR_desc_r     ; p_osc->freq     = (float)work / 10;
-	if( !p_doc->v_r( &work )          ) return pxtnERR_desc_r     ; p_osc->volume   = (float)work / 10;
-	if( !p_doc->v_r( &work )          ) return pxtnERR_desc_r     ; p_osc->offset   = (float)work / 10;
+	if( !_data_r_v( desc, &work )     ) return pxtnERR_desc_r     ; p_osc->b_rev    = work ? true : false;
+	if( !_data_r_v( desc, &work )     ) return pxtnERR_desc_r     ; p_osc->freq     = (float)work / 10;
+	if( !_data_r_v( desc, &work )     ) return pxtnERR_desc_r     ; p_osc->volume   = (float)work / 10;
+	if( !_data_r_v( desc, &work )     ) return pxtnERR_desc_r     ; p_osc->offset   = (float)work / 10;
 
 	return pxtnOK;
 }
 
-static uint32_t _MakeFlags( const pxNOISEDESIGN_UNIT *pU )
+uint32_t pxtnPulse_Noise::_MakeFlags( const pxNOISEDESIGN_UNIT *pU ) const
 {
 	uint32_t flags = 0;
 	flags |= NOISEEDITFLAG_ENVELOPE;
@@ -145,7 +147,7 @@ static uint32_t _MakeFlags( const pxNOISEDESIGN_UNIT *pU )
 	return flags;
 }
 
-bool pxtnPulse_Noise::write( pxtnDescriptor *p_doc, int32_t *p_add ) const
+bool pxtnPulse_Noise::write( void* desc, int32_t *p_add ) const
 {
 	bool  b_ret = false;
 	int32_t   u, e, seek, num_seek, flags;
@@ -153,17 +155,15 @@ bool pxtnPulse_Noise::write( pxtnDescriptor *p_doc, int32_t *p_add ) const
 	char  unit_num = 0;
 	const pxNOISEDESIGN_UNIT *pU;
 
-//	Fix();
-
 	if( p_add ) seek = *p_add;
 	else        seek =      0;
 
-	if( !p_doc->w_asfile( _code, 1, 8 ) ) goto End;
-	if( !p_doc->w_asfile( &_ver, 4, 1 ) ) goto End;
+	if( !_io_write( desc,_code, 1, 8 ) ) goto End;
+	if( !_io_write( desc,&_ver, 4, 1 ) ) goto End;
 	seek += 12;
-	if( !p_doc->v_w_asfile( _smp_num_44k, &seek ) ) goto End;
+	if( !_data_w_v( desc, _smp_num_44k, &seek ) ) goto End;
 
-	if( !p_doc->w_asfile( &unit_num , 1, 1 ) ) goto End;
+	if( !_io_write( desc,&unit_num , 1, 1 ) ) goto End;
 	num_seek = seek;
 	seek += 1;
 
@@ -174,33 +174,33 @@ bool pxtnPulse_Noise::write( pxtnDescriptor *p_doc, int32_t *p_add ) const
 		{
 			// フラグ
 			flags = _MakeFlags( pU );
-			if( !p_doc->v_w_asfile( flags, &seek ) ) goto End;
+			if( !_data_w_v( desc, flags, &seek ) ) goto End;
 			if( flags & NOISEEDITFLAG_ENVELOPE )
 			{
-				if( !p_doc->v_w_asfile( pU->enve_num, &seek ) ) goto End;
+				if( !_data_w_v( desc, pU->enve_num, &seek ) ) goto End;
 				for( e = 0; e < pU->enve_num; e++ )
 				{
-					if( !p_doc->v_w_asfile( pU->enves[ e ].x, &seek ) ) goto End;
-					if( !p_doc->v_w_asfile( pU->enves[ e ].y, &seek ) ) goto End;
+					if( !_data_w_v( desc, pU->enves[ e ].x, &seek ) ) goto End;
+					if( !_data_w_v( desc, pU->enves[ e ].y, &seek ) ) goto End;
 				}
 			}
 			if( flags & NOISEEDITFLAG_PAN      )
 			{
 				byte = (char)pU->pan;
-				if( !p_doc->w_asfile( &byte, 1, 1 ) ) goto End;
+				if( !_io_write( desc,&byte, 1, 1 ) ) goto End;
 				seek++;
 			}
-			if( flags & NOISEEDITFLAG_OSC_MAIN ){ if( !_WriteOscillator( &pU->main, p_doc, &seek ) ) goto End; }
-			if( flags & NOISEEDITFLAG_OSC_FREQ ){ if( !_WriteOscillator( &pU->freq, p_doc, &seek ) ) goto End; }
-			if( flags & NOISEEDITFLAG_OSC_VOLU ){ if( !_WriteOscillator( &pU->volu, p_doc, &seek ) ) goto End; }
+			if( flags & NOISEEDITFLAG_OSC_MAIN ){ if( !_WriteOscillator( &pU->main, desc, &seek ) ) goto End; }
+			if( flags & NOISEEDITFLAG_OSC_FREQ ){ if( !_WriteOscillator( &pU->freq, desc, &seek ) ) goto End; }
+			if( flags & NOISEEDITFLAG_OSC_VOLU ){ if( !_WriteOscillator( &pU->volu, desc, &seek ) ) goto End; }
 			unit_num++;
 		}
 	}
 
 	// update unit_num.
-	p_doc->seek( pxtnSEEK_cur, num_seek - seek );
-	if( !p_doc->w_asfile( &unit_num, 1, 1 ) ) goto End;
-	p_doc->seek( pxtnSEEK_cur, seek - num_seek -1 );
+	_io_seek( desc, SEEK_CUR, num_seek - seek    );
+	if( !_io_write( desc,&unit_num, 1, 1 ) ) goto End;
+	_io_seek( desc, SEEK_CUR, seek - num_seek -1 );
 	if( p_add ) *p_add = seek;
 
 	b_ret = true;
@@ -209,7 +209,7 @@ End:
 	return b_ret;
 }
 
-pxtnERR pxtnPulse_Noise::read( pxtnDescriptor *p_doc )
+pxtnERR pxtnPulse_Noise::read( void* desc )
 {
 	pxtnERR  res       = pxtnERR_VOID;
 	uint32_t flags     =            0;
@@ -223,12 +223,12 @@ pxtnERR pxtnPulse_Noise::read( pxtnDescriptor *p_doc )
 
 	Release();
 	
-	if( !p_doc->r( code, 1, 8 )         ){ res = pxtnERR_desc_r     ; goto term; }
+	if( !_io_read( desc, code, 1, 8 )         ){ res = pxtnERR_desc_r     ; goto term; }
 	if( memcmp( code, _code, 8 )        ){ res = pxtnERR_inv_code   ; goto term; }
-	if( !p_doc->r( &ver     , 4, 1 )    ){ res = pxtnERR_desc_r     ; goto term; }	
+	if( !_io_read( desc, &ver     , 4, 1 )    ){ res = pxtnERR_desc_r     ; goto term; }	
 	if( ver > _ver                      ){ res = pxtnERR_fmt_new    ; goto term; }	
-	if( !p_doc->v_r( &_smp_num_44k )    ){ res = pxtnERR_desc_r     ; goto term; }
-	if( !p_doc->r( &unit_num, 1, 1 )    ){ res = pxtnERR_desc_r     ; goto term; }
+	if( !_data_r_v( desc, &_smp_num_44k )    ){ res = pxtnERR_desc_r     ; goto term; }
+	if( !_io_read( desc, &unit_num, 1, 1 )    ){ res = pxtnERR_desc_r     ; goto term; }
 	if( unit_num < 0                    ){ res = pxtnERR_inv_data   ; goto term; }
 	if( unit_num > MAX_NOISEEDITUNITNUM ){ res = pxtnERR_fmt_unknown; goto term; }
 	_unit_num = unit_num;			    
@@ -240,31 +240,31 @@ pxtnERR pxtnPulse_Noise::read( pxtnDescriptor *p_doc )
 		pU = &_units[ u ];
 		pU->bEnable = true;
 
-		if( !p_doc->v_r( (int32_t*)&flags ) ){ res = pxtnERR_desc_r     ; goto term; }
+		if( !_data_r_v( desc, (int32_t*)&flags ) ){ res = pxtnERR_desc_r     ; goto term; }
 		if( flags & NOISEEDITFLAG_UNCOVERED ){ res = pxtnERR_fmt_unknown; goto term; }
 
 		// envelope
 		if( flags & NOISEEDITFLAG_ENVELOPE )
 		{
-			if( !p_doc->v_r( &pU->enve_num ) ){ res = pxtnERR_desc_r; goto term; }
+			if( !_data_r_v( desc, &pU->enve_num ) ){ res = pxtnERR_desc_r; goto term; }
 			if( pU->enve_num > MAX_NOISEEDITENVELOPENUM ){ res = pxtnERR_fmt_unknown; goto term; }
 			if( !pxtnMem_zero_alloc( (void**)&pU->enves, sizeof(pxtnPOINT) * pU->enve_num ) ){ res = pxtnERR_memory; goto term; }
 			for( int32_t e = 0; e < pU->enve_num; e++ )
 			{
-				if( !p_doc->v_r( &pU->enves[ e ].x ) ){ res = pxtnERR_desc_r; goto term; }
-				if( !p_doc->v_r( &pU->enves[ e ].y ) ){ res = pxtnERR_desc_r; goto term; }
+				if( !_data_r_v( desc, &pU->enves[ e ].x ) ){ res = pxtnERR_desc_r; goto term; }
+				if( !_data_r_v( desc, &pU->enves[ e ].y ) ){ res = pxtnERR_desc_r; goto term; }
 			}
 		}
 		// pan
 		if( flags & NOISEEDITFLAG_PAN )
 		{
-			if( !p_doc->r( &byte, 1, 1 ) ){ res = pxtnERR_desc_r; goto term; }
+			if( !_io_read( desc, &byte, 1, 1 ) ){ res = pxtnERR_desc_r; goto term; }
 			pU->pan = byte;
 		}
 		
-		if( flags & NOISEEDITFLAG_OSC_MAIN ){ res = _ReadOscillator( &pU->main, p_doc ); if( res != pxtnOK ) goto term; }
-		if( flags & NOISEEDITFLAG_OSC_FREQ ){ res = _ReadOscillator( &pU->freq, p_doc ); if( res != pxtnOK ) goto term; }
-		if( flags & NOISEEDITFLAG_OSC_VOLU ){ res = _ReadOscillator( &pU->volu, p_doc ); if( res != pxtnOK ) goto term; }
+		if( flags & NOISEEDITFLAG_OSC_MAIN ){ res = _ReadOscillator( &pU->main, desc ); if( res != pxtnOK ) goto term; }
+		if( flags & NOISEEDITFLAG_OSC_FREQ ){ res = _ReadOscillator( &pU->freq, desc ); if( res != pxtnOK ) goto term; }
+		if( flags & NOISEEDITFLAG_OSC_VOLU ){ res = _ReadOscillator( &pU->volu, desc ); if( res != pxtnOK ) goto term; }
 	}
 
 	res = pxtnOK;
@@ -310,35 +310,36 @@ End:
 	return b_ret;
 }
 
-bool pxtnPulse_Noise::Copy( pxtnPulse_Noise *p_dst ) const
+bool pxtnPulse_Noise::copy_from( const pxtnPulse_Noise* src )
 {
-	if( !p_dst ) return false;
+	pxtnData::copy_from( src );
+	if( !src ) return false;
 
 	bool b_ret = false;
 
-	p_dst->Release();
-	p_dst->_smp_num_44k = _smp_num_44k;
+	Release();
+	_smp_num_44k = src->_smp_num_44k;
 
-	if( _unit_num )
+	if( src->_unit_num )
 	{
-		int32_t enve_num = _units[ 0 ].enve_num;
-		if( !p_dst->Allocate( _unit_num, enve_num ) ) goto End;
-		for( int32_t u = 0; u < _unit_num; u++ )
+		int32_t enve_num = src->_units[ 0 ].enve_num;
+		if( !Allocate( src->_unit_num, enve_num ) ) goto End;
+		for( int32_t u = 0; u < src->_unit_num; u++ )
 		{
-			p_dst->_units[ u ].bEnable  = _units[ u ].bEnable ;
-			p_dst->_units[ u ].enve_num = _units[ u ].enve_num;
-			p_dst->_units[ u ].freq     = _units[ u ].freq    ;
-			p_dst->_units[ u ].main     = _units[ u ].main    ;
-			p_dst->_units[ u ].pan      = _units[ u ].pan     ;
-			p_dst->_units[ u ].volu     = _units[ u ].volu    ;
-			if( !( p_dst->_units[ u ].enves = (pxtnPOINT*)malloc( sizeof(pxtnPOINT) * enve_num ) ) ) goto End;
-			for( int32_t e = 0; e < enve_num; e++ ) p_dst->_units[ u ].enves[ e ] = _units[ u ].enves[ e ];
+			_units[ u ].bEnable  = src->_units[ u ].bEnable ;
+			_units[ u ].enve_num = src->_units[ u ].enve_num;
+			_units[ u ].freq     = src->_units[ u ].freq    ;
+			_units[ u ].main     = src->_units[ u ].main    ;
+			_units[ u ].pan      = src->_units[ u ].pan     ;
+			_units[ u ].volu     = src->_units[ u ].volu    ;
+			if( !( _units[ u ].enves = (pxtnPOINT*)malloc( sizeof(pxtnPOINT) * enve_num ) ) ) goto End;
+			for( int32_t e = 0; e < enve_num; e++ ) _units[ u ].enves[ e ] = src->_units[ u ].enves[ e ];
 		}
 	}
 
 	b_ret = true;
 End:
-	if( !b_ret ) p_dst->Release();
+	if( !b_ret ) Release();
 
 	return b_ret;
 }

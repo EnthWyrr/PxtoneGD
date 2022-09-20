@@ -6,8 +6,10 @@
 
 #include "./pxtnDelay.h"
 
-pxtnDelay::pxtnDelay()
+pxtnDelay::pxtnDelay( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos )
 {
+	_set_io_funcs( io_read, io_write, io_seek, io_pos );
+
 	_b_played = true; 
 	_unit     = DELAYUNIT_Beat;    
 	_group    =    0;
@@ -114,7 +116,7 @@ typedef struct
 }
 _DELAYSTRUCT;
 
-bool pxtnDelay::Write( pxtnDescriptor *p_doc ) const
+bool pxtnDelay::Write( void* desc ) const
 {
 	_DELAYSTRUCT    dela;
 	int32_t            size;
@@ -127,19 +129,19 @@ bool pxtnDelay::Write( pxtnDescriptor *p_doc ) const
 
 	// dela ----------
 	size = sizeof( _DELAYSTRUCT );
-	if( !p_doc->w_asfile( &size, sizeof(int32_t), 1 ) ) return false;
-	if( !p_doc->w_asfile( &dela, size,            1 ) ) return false;
+	if( !_io_write( desc, &size, sizeof(int32_t), 1 ) ) return false;
+	if( !_io_write( desc, &dela, size,            1 ) ) return false;
 
 	return true;
 }
 
-pxtnERR pxtnDelay::Read( pxtnDescriptor *p_doc )
+pxtnERR pxtnDelay::Read( void* desc )
 {
 	_DELAYSTRUCT dela = {0};
 	int32_t      size =  0 ;
 
-	if( !p_doc->r( &size, 4,                    1 ) ) return pxtnERR_desc_r     ;
-	if( !p_doc->r( &dela, sizeof(_DELAYSTRUCT), 1 ) ) return pxtnERR_desc_r     ;
+	if( !_io_read( desc, &size, 4,                    1 ) ) return pxtnERR_desc_r     ;
+	if( !_io_read( desc, &dela, sizeof(_DELAYSTRUCT), 1 ) ) return pxtnERR_desc_r     ;
 	if( dela.unit >= DELAYUNIT_num                  ) return pxtnERR_fmt_unknown;
 
 	_unit  = (DELAYUNIT)dela.unit;

@@ -106,8 +106,10 @@ void _incriment( _OSCILLATOR *p_osc, double incriment, const short *p_tbl_rand )
 	}
 }
 
-pxtnPulse_NoiseBuilder::pxtnPulse_NoiseBuilder()
+pxtnPulse_NoiseBuilder::pxtnPulse_NoiseBuilder( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos )
 {
+	_set_io_funcs( io_read, io_write, io_seek, io_pos );
+
 	_b_init = false;
 	_freq = NULL;
 	for( int32_t i = 0; i < pxWAVETYPE_num; i++ ) _p_tables[ i ] = NULL;
@@ -153,7 +155,7 @@ bool pxtnPulse_NoiseBuilder::Init()
 	int32_t    a;
 	short  v;
 
-	pxtnPulse_Oscillator osci;
+	pxtnPulse_Oscillator osci( _io_read, _io_write, _io_seek, _io_pos );
 
 	pxtnPOINT overtones_sine[ 1] = { {1,128} };
 	pxtnPOINT overtones_saw2[16] = { { 1,128},{ 2,128},{ 3,128},{ 4,128}, { 5,128},{ 6,128},{ 7,128},{ 8,128},
@@ -164,7 +166,7 @@ bool pxtnPulse_NoiseBuilder::Init()
 	
 	if( _b_init ) return true;
 
-	_freq = new pxtnPulse_Frequency(); if( !_freq->Init() ) goto End;
+	_freq = new pxtnPulse_Frequency( _io_read, _io_write, _io_seek, _io_pos ); if( !_freq->Init() ) goto End;
 
 
 	for( s = 0; s < pxWAVETYPE_num; s++ ) _p_tables[ s ] = NULL;
@@ -178,7 +180,7 @@ bool pxtnPulse_NoiseBuilder::Init()
 	if( !pxtnMem_zero_alloc( (void **)&_p_tables[ pxWAVETYPE_Rect2   ], sizeof(short) * _smp_num      ) ) goto End;
 
 	if( !pxtnMem_zero_alloc( (void **)&_p_tables[ pxWAVETYPE_Tri     ], sizeof(short) * _smp_num      ) ) goto End;
-//	if( !pxtnMem_zero_alloc( (void **)&_p_tables[ pxWAVETYPE_Random2 ], sizeof(short) * _smp_num_rand ) ) goto End; x
+ //	if( !pxtnMem_zero_alloc( (void **)&_p_tables[ pxWAVETYPE_Random2 ], sizeof(short) * _smp_num_rand ) ) goto End; x
 	if( !pxtnMem_zero_alloc( (void **)&_p_tables[ pxWAVETYPE_Rect3   ], sizeof(short) * _smp_num      ) ) goto End;
 	if( !pxtnMem_zero_alloc( (void **)&_p_tables[ pxWAVETYPE_Rect4   ], sizeof(short) * _smp_num      ) ) goto End;
 	if( !pxtnMem_zero_alloc( (void **)&_p_tables[ pxWAVETYPE_Rect8   ], sizeof(short) * _smp_num      ) ) goto End;
@@ -381,7 +383,7 @@ pxtnPulse_PCM *pxtnPulse_NoiseBuilder::BuildNoise( pxtnPulse_Noise *p_noise, int
 
 	smp_num = (int32_t)( (double)p_noise->get_smp_num_44k() / ( 44100.0 / sps ) );
 
-	p_pcm = new pxtnPulse_PCM();
+	p_pcm = new pxtnPulse_PCM( _io_read, _io_write, _io_seek, _io_pos );
 	if( p_pcm->Create( ch, sps, bps, smp_num ) != pxtnOK ) goto End;
 	p = (unsigned char*)p_pcm->get_p_buf_variable();
 

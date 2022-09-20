@@ -1,12 +1,13 @@
 ﻿// '12/03/03
 
-#include "./pxtn.h"
+#include "./pxtnData.h"
 
 #include "./pxtnMaster.h"
 #include "./pxtnEvelist.h"
 
-pxtnMaster::pxtnMaster()
+pxtnMaster::pxtnMaster( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos )
 {
+	_set_io_funcs( io_read, io_write, io_seek, io_pos );
 	Reset();
 }
 
@@ -91,7 +92,7 @@ void  pxtnMaster::set_beat_clock ( int32_t beat_clock ){ if( beat_clock < 0 ) be
 
 
 
-bool pxtnMaster::io_w_v5( pxtnDescriptor *p_doc, int32_t rough ) const
+bool pxtnMaster::io_w_v5( void* desc, int32_t rough ) const
 {
 
 	uint32_t   size   =          15;
@@ -100,17 +101,17 @@ bool pxtnMaster::io_w_v5( pxtnDescriptor *p_doc, int32_t rough ) const
 	int32_t   clock_last   = bclock * _beat_num * get_last_meas  ();
 	int8_t    bnum   = _beat_num  ;
 	float btempo = _beat_tempo;
-	if( !p_doc->w_asfile( &size        , sizeof(uint32_t  ), 1 ) ) return false;
-	if( !p_doc->w_asfile( &bclock      , sizeof(int16_t  ), 1 ) ) return false;
-	if( !p_doc->w_asfile( &bnum        , sizeof(int8_t   ), 1 ) ) return false;
-	if( !p_doc->w_asfile( &btempo      , sizeof(float), 1 ) ) return false;
-	if( !p_doc->w_asfile( &clock_repeat, sizeof(int32_t  ), 1 ) ) return false;
-	if( !p_doc->w_asfile( &clock_last  , sizeof(int32_t  ), 1 ) ) return false;
+	if( !_io_write( desc, &size        , sizeof(uint32_t), 1 ) ) return false;
+	if( !_io_write( desc, &bclock      , sizeof(int16_t ), 1 ) ) return false;
+	if( !_io_write( desc, &bnum        , sizeof(int8_t  ), 1 ) ) return false;
+	if( !_io_write( desc, &btempo      , sizeof(float   ), 1 ) ) return false;
+	if( !_io_write( desc, &clock_repeat, sizeof(int32_t ), 1 ) ) return false;
+	if( !_io_write( desc, &clock_last  , sizeof(int32_t ), 1 ) ) return false;
 
 	return true;
 }
 
-pxtnERR pxtnMaster::io_r_v5( pxtnDescriptor *p_doc )
+pxtnERR pxtnMaster::io_r_v5( void* desc )
 {
 	pxtnERR   res = pxtnERR_VOID;
 	int16_t   beat_clock   = 0;
@@ -121,14 +122,14 @@ pxtnERR pxtnMaster::io_r_v5( pxtnDescriptor *p_doc )
 
 	uint32_t  size         = 0;
 
-	if( !p_doc->r( &size, sizeof(uint32_t), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &size, sizeof(uint32_t), 1 ) ) return pxtnERR_desc_r;
 	if( size != 15                              ) return pxtnERR_fmt_unknown;
 
-	if( !p_doc->r( &beat_clock  ,sizeof(int16_t), 1 ) ) return pxtnERR_desc_r;
-	if( !p_doc->r( &beat_num    ,sizeof(int8_t ), 1 ) ) return pxtnERR_desc_r;
-	if( !p_doc->r( &beat_tempo  ,sizeof(float  ), 1 ) ) return pxtnERR_desc_r;
-	if( !p_doc->r( &clock_repeat,sizeof(int32_t), 1 ) ) return pxtnERR_desc_r;
-	if( !p_doc->r( &clock_last  ,sizeof(int32_t), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &beat_clock  ,sizeof(int16_t), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &beat_num    ,sizeof(int8_t ), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &beat_tempo  ,sizeof(float  ), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &clock_repeat,sizeof(int32_t), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &clock_last  ,sizeof(int32_t), 1 ) ) return pxtnERR_desc_r;
 
 	_beat_clock = beat_clock;
 	_beat_num   = beat_num  ;
@@ -140,13 +141,13 @@ pxtnERR pxtnMaster::io_r_v5( pxtnDescriptor *p_doc )
 	return pxtnOK;
 }
 
-int32_t pxtnMaster::io_r_v5_EventNum( pxtnDescriptor *p_doc )
+int32_t pxtnMaster::io_r_v5_EventNum( void* desc )
 {
 	uint32_t size;
-	if( !p_doc->r( &size, sizeof(uint32_t),  1 ) ) return 0;
+	if( !_io_read( desc, &size, sizeof(uint32_t),  1 ) ) return 0;
 	if( size != 15                               ) return 0;
 	int8_t buf[ 15 ];
-	if( !p_doc->r(  buf , sizeof(int8_t ), 15 )  ) return 0;
+	if( !_io_read( desc,  buf , sizeof(int8_t ), 15 )  ) return 0;
 	return 5;
 }
 
@@ -164,7 +165,7 @@ typedef struct
 _x4x_MASTER;
 
 // read( project )
-pxtnERR pxtnMaster::io_r_x4x( pxtnDescriptor *p_doc )
+pxtnERR pxtnMaster::io_r_x4x( void* desc )
 {
 	_x4x_MASTER mast     ={0};
 	int32_t     size     = 0;
@@ -177,8 +178,8 @@ pxtnERR pxtnMaster::io_r_x4x( pxtnDescriptor *p_doc )
 	int32_t     beat_clock, beat_num, repeat_clock, last_clock;
 	float       beat_tempo = 0;
 
-	if( !p_doc->r( &size,                     4, 1 ) ) return pxtnERR_desc_r;
-	if( !p_doc->r( &mast, sizeof( _x4x_MASTER ), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &size,                     4, 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &mast, sizeof( _x4x_MASTER ), 1 ) ) return pxtnERR_desc_r;
 
 	// unknown format
 	if( mast.data_num != 3 ) return pxtnERR_fmt_unknown;
@@ -194,9 +195,9 @@ pxtnERR pxtnMaster::io_r_x4x( pxtnDescriptor *p_doc )
 
 	for( e = 0; e < (int32_t)mast.event_num; e++ )
 	{
-		if( !p_doc->v_r( &status ) ) break;
-		if( !p_doc->v_r( &clock  ) ) break;
-		if( !p_doc->v_r( &volume ) ) break;
+		if( !_data_r_v( desc, &status ) ) break;
+		if( !_data_r_v( desc, &clock  ) ) break;
+		if( !_data_r_v( desc, &volume ) ) break;
 		absolute += clock;
 		clock     = absolute;
 
@@ -223,7 +224,7 @@ pxtnERR pxtnMaster::io_r_x4x( pxtnDescriptor *p_doc )
 	return pxtnOK;
 }
 
-int32_t pxtnMaster::io_r_x4x_EventNum( pxtnDescriptor *p_doc )
+int32_t pxtnMaster::io_r_x4x_EventNum( void* desc )
 {
 	_x4x_MASTER mast;
 	int32_t     size;
@@ -231,16 +232,16 @@ int32_t pxtnMaster::io_r_x4x_EventNum( pxtnDescriptor *p_doc )
 	int32_t     e   ;
 
 	memset( &mast, 0, sizeof( _x4x_MASTER ) );
-	if( !p_doc->r( &size,                     4, 1 ) ) return 0;
-	if( !p_doc->r( &mast, sizeof( _x4x_MASTER ), 1 ) ) return 0;
+	if( !_io_read( desc, &size,                     4, 1 ) ) return 0;
+	if( !_io_read( desc, &mast, sizeof( _x4x_MASTER ), 1 ) ) return 0;
 
 	if( mast.data_num != 3 ) return 0;
 
 	for( e = 0; e < (int32_t)mast.event_num; e++ )
 	{
-		if( !p_doc->v_r( &work ) ) return 0;
-		if( !p_doc->v_r( &work ) ) return 0;
-		if( !p_doc->v_r( &work ) ) return 0;
+		if( !_data_r_v( desc, &work ) ) return 0;
+		if( !_data_r_v( desc, &work ) ) return 0;
+		if( !_data_r_v( desc, &work ) ) return 0;
 	}
 
 	return mast.event_num;

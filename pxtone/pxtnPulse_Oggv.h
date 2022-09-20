@@ -3,12 +3,11 @@
 
 #ifdef  pxINCLUDE_OGGVORBIS
 
-#include "./pxtn.h"
+#include "./pxtnData.h"
 
-#include "./pxtnDescriptor.h"
 #include "./pxtnPulse_PCM.h"
 
-class pxtnPulse_Oggv
+class pxtnPulse_Oggv: public pxtnData
 {
 private:
 	void operator = (const pxtnPulse_Oggv& src){}
@@ -24,7 +23,7 @@ private:
 
 public :
 
-	 pxtnPulse_Oggv();
+	 pxtnPulse_Oggv( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos );
 	~pxtnPulse_Oggv();
 
 	pxtnERR Decode ( pxtnPulse_PCM *p_pcm ) const;
@@ -32,12 +31,12 @@ public :
 	bool    GetInfo( int* p_ch, int* p_sps, int* p_smp_num );
 	int32_t GetSize() const;
 			   
-	bool    ogg_write ( pxtnDescriptor *p_doc ) const;
-	pxtnERR ogg_read  ( pxtnDescriptor *p_doc );
-	bool    pxtn_write( pxtnDescriptor *p_doc ) const;
-	bool    pxtn_read ( pxtnDescriptor *p_doc );
+	bool    ogg_write ( void* desc ) const;
+	pxtnERR ogg_read  ( void* desc );
+	bool    pxtn_write( void* desc ) const;
+	bool    pxtn_read ( void* desc );
 		       
-	bool    Copy      ( pxtnPulse_Oggv *p_dst ) const;
+	bool    copy_from ( const pxtnPulse_Oggv* src );
 };
 #endif
 #endif

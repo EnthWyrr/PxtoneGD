@@ -1,11 +1,11 @@
 ﻿// '12/03/03
 
-#include "./pxtn.h"
-
 #include "./pxtnOverDrive.h"
 
-pxtnOverDrive::pxtnOverDrive()
+pxtnOverDrive::pxtnOverDrive( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos )
 {
+	_set_io_funcs( io_read, io_write, io_seek, io_pos );
+
 	_b_played = true;
 }
 
@@ -54,7 +54,7 @@ typedef struct
 }
 _OVERDRIVESTRUCT;
 
-bool pxtnOverDrive::Write( pxtnDescriptor *p_doc ) const
+bool pxtnOverDrive::Write( void* desc ) const
 {
 	_OVERDRIVESTRUCT over;
 	int32_t              size;
@@ -66,20 +66,20 @@ bool pxtnOverDrive::Write( pxtnDescriptor *p_doc ) const
 
 	// dela ----------
 	size = sizeof( _OVERDRIVESTRUCT );
-	if( !p_doc->w_asfile( &size, sizeof(uint32_t), 1 ) ) return false;
-	if( !p_doc->w_asfile( &over, size,        1 ) ) return false;
+	if( !_io_write( desc, &size, sizeof(uint32_t), 1 ) ) return false;
+	if( !_io_write( desc, &over, size,        1 ) ) return false;
 
 	return true;
 }
 
-pxtnERR pxtnOverDrive::Read( pxtnDescriptor *p_doc )
+pxtnERR pxtnOverDrive::Read( void* desc )
 {
 	_OVERDRIVESTRUCT over = {0};
 	int32_t          size =  0 ;
 
 	memset( &over, 0, sizeof(_OVERDRIVESTRUCT) );
-	if( !p_doc->r( &size, 4,                        1 ) ) return pxtnERR_desc_r;
-	if( !p_doc->r( &over, sizeof(_OVERDRIVESTRUCT), 1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &size, 4,                        1 ) ) return pxtnERR_desc_r;
+	if( !_io_read( desc, &over, sizeof(_OVERDRIVESTRUCT), 1 ) ) return pxtnERR_desc_r;
 
 	if( over.xxx                         ) return pxtnERR_fmt_unknown;
 	if( over.yyy                         ) return pxtnERR_fmt_unknown;

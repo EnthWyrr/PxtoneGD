@@ -3,9 +3,8 @@
 #ifndef pxtnDelay_H
 #define pxtnDelay_H
 
-#include "./pxtn.h"
+#include "./pxtnData.h"
 
-#include "./pxtnDescriptor.h"
 #include "./pxtnMax.h"
 
 enum DELAYUNIT
@@ -16,7 +15,7 @@ enum DELAYUNIT
 	DELAYUNIT_num     ,
 };
 
-class pxtnDelay
+class pxtnDelay: public pxtnData
 {
 private:
 
@@ -36,7 +35,7 @@ private:
 
 public :
 
-	 pxtnDelay();
+	 pxtnDelay( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos );
 	~pxtnDelay();
 
 	pxtnERR Tone_Ready    ( int32_t beat_num, float beat_tempo, int32_t sps );
@@ -47,8 +46,8 @@ public :
 
 	bool Add_New    ( DELAYUNIT scale, float freq, float rate, int32_t group );
 
-	bool    Write( pxtnDescriptor *p_doc ) const;
-	pxtnERR Read ( pxtnDescriptor *p_doc );
+	bool      Write( void* desc ) const;
+	pxtnERR   Read ( void* desc );
 
 
 	DELAYUNIT get_unit ()const;

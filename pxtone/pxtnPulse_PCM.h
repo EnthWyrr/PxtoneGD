@@ -1,11 +1,9 @@
 ﻿#ifndef pxtnPulse_PCM_H
 #define pxtnPulse_PCM_H
 
-#include "./pxtn.h"
+#include "./pxtnData.h"
 
-#include "./pxtnDescriptor.h"
-
-class pxtnPulse_PCM
+class pxtnPulse_PCM: public pxtnData
 {
 private:
 	void operator = (const pxtnPulse_PCM& src){}
@@ -25,19 +23,19 @@ private:
 
 public:
 
-	 pxtnPulse_PCM();
+	 pxtnPulse_PCM( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos );
 	~pxtnPulse_PCM();
 
 	pxtnERR Create ( int32_t ch, int32_t sps, int32_t bps, int32_t sample_num );
 	void    Release();
 
-	pxtnERR read ( pxtnDescriptor* doc );
-	bool    write( pxtnDescriptor* doc, const char* pstrLIST ) const;
+	pxtnERR read ( void* desc );
+	bool    write( void* desc, const char* pstrLIST ) const;
 
 
 	bool    Convert( int32_t  new_ch, int32_t new_sps, int32_t new_bps );
 	bool    Convert_Volume( float v );
-	pxtnERR Copy   ( pxtnPulse_PCM *p_dst ) const;
+	bool    copy_from( const pxtnPulse_PCM *src );
 	bool    Copy_  ( pxtnPulse_PCM *p_dst, int32_t start, int32_t end ) const;
 
 	void *Devolve_SamplingBuffer();

@@ -3,13 +3,12 @@
 #ifndef pxtnUnit_H
 #define pxtnUnit_H
 
-#include "./pxtn.h"
+#include "./pxtnData.h"
 
-#include "./pxtnDescriptor.h"
 #include "./pxtnMax.h"
 #include "./pxtnWoice.h"
 
-class pxtnUnit
+class pxtnUnit: public pxtnData
 {
 private:
 	void operator = (const pxtnUnit& src){}
@@ -39,7 +38,7 @@ private:
 	pxtnVOICETONE _vts[ pxtnMAX_UNITCONTROLVOICE ];
 
 public :
-	 pxtnUnit();
+	 pxtnUnit( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos );
 	~pxtnUnit();
 
 	void    Tone_Init ();
@@ -79,8 +78,8 @@ public :
 	bool get_operated() const;
 	bool get_played  () const;
 
-	pxtnERR Read_v3x( pxtnDescriptor *p_doc, int32_t *p_group );
-	bool    Read_v1x( pxtnDescriptor *p_doc, int32_t *p_group );
+	pxtnERR Read_v3x( void* desc, int32_t *p_group );
+	bool    Read_v1x( void* desc, int32_t *p_group );
 };
 
 #endif

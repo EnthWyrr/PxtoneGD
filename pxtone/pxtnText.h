@@ -3,11 +3,9 @@
 #ifndef pxtnText_H
 #define pxtnText_H
 
-#include "./pxtn.h"
+#include "./pxtnData.h"
 
-#include "./pxtnDescriptor.h"
-
-class pxtnText
+class pxtnText: public pxtnData
 {
 private:
 	void operator = (const pxtnText& src){}
@@ -19,8 +17,11 @@ private:
 	char*   _p_name_buf   ;
 	int32_t _name_size    ;
 
+	bool _read4_malloc(       char** pp, int32_t* p_buf_size, void* desc );
+	bool _write4      ( const char*  p , int32_t    buf_size, void* desc ) const;
+
 public :
-	 pxtnText();
+	 pxtnText( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos );
 	~pxtnText();
 
 	bool        set_comment_buf( const char *p_comment, int32_t    buf_size );
@@ -31,10 +32,10 @@ public :
 	const char* get_name_buf   (                        int32_t* p_buf_size ) const;
 	bool        is_name_buf    () const;
 
-	bool Comment_r( pxtnDescriptor *p_doc );
-	bool Comment_w( pxtnDescriptor *p_doc );
-	bool Name_r   ( pxtnDescriptor *p_doc );
-	bool Name_w   ( pxtnDescriptor *p_doc );
+	bool Comment_r( void* desc );
+	bool Comment_w( void* desc );
+	bool Name_r   ( void* desc );
+	bool Name_w   ( void* desc );
 };
 
 #endif

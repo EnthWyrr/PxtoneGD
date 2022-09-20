@@ -6,8 +6,10 @@
 #include "./pxtnEvelist.h"
 #include "./pxtnMem.h"
 
-pxtnWoice::pxtnWoice()
+pxtnWoice::pxtnWoice( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos )
 {
+	_set_io_funcs( io_read, io_write, io_seek, io_pos );
+
 	memset( _name_buf, 0, sizeof(_name_buf) );
 	_name_size =              0;
 
@@ -130,13 +132,13 @@ bool pxtnWoice::Voice_Allocate( int32_t voice_num )
 		p_vc->basic_key   = EVENTDEFAULT_BASICKEY;
 		p_vc->volume      =  128;
 		p_vc->pan         =   64;
-		p_vc->tuning     =  1.0f;
+		p_vc->tuning      = 1.0f;
 		p_vc->voice_flags = PTV_VOICEFLAG_SMOOTH;
 		p_vc->data_flags  = PTV_DATAFLAG_WAVE   ;
-		p_vc->p_pcm       = new pxtnPulse_PCM  ();
-		p_vc->p_ptn       = new pxtnPulse_Noise();
+		p_vc->p_pcm       = new pxtnPulse_PCM  ( _io_read, _io_write, _io_seek, _io_pos );
+		p_vc->p_ptn       = new pxtnPulse_Noise( _io_read, _io_write, _io_seek, _io_pos );
 #ifdef  pxINCLUDE_OGGVORBIS
-		p_vc->p_oggv      = new pxtnPulse_Oggv ();
+		p_vc->p_oggv      = new pxtnPulse_Oggv ( _io_read, _io_write, _io_seek, _io_pos );
 #endif
 		memset( &p_vc->envelope, 0, sizeof(pxtnVOICEENVELOPE) );
 	}
@@ -193,10 +195,10 @@ bool pxtnWoice::Copy( pxtnWoice *p_dst ) const
 		if( !pxtnMem_zero_alloc( (void **)&p_vc2->wave.points, size ) ) goto End;
 		memcpy(                            p_vc2->wave.points, p_vc1->wave.points, size );
 
-		if(  p_vc1->p_pcm ->Copy( p_vc2->p_pcm  ) != pxtnOK ) goto End;
-		if( !p_vc1->p_ptn ->Copy( p_vc2->p_ptn  )           ) goto End;
+		if( !p_vc2->p_pcm ->copy_from( p_vc1->p_pcm  ) ) goto End;
+		if( !p_vc2->p_ptn ->copy_from( p_vc1->p_ptn  ) ) goto End;
 #ifdef  pxINCLUDE_OGGVORBIS
-		if( !p_vc1->p_oggv->Copy( p_vc2->p_oggv )           ) goto End;
+		if( !p_vc1->p_oggv->copy_from( p_vc2->p_oggv ) ) goto End;
 #endif
 	}
 
@@ -208,7 +210,7 @@ End:
 }
 
 
-pxtnERR pxtnWoice::read( pxtnDescriptor* desc, pxtnWOICETYPE type )
+pxtnERR pxtnWoice::read( void* desc, pxtnWOICETYPE type )
 {
 	pxtnERR res = pxtnERR_VOID;
 
@@ -267,14 +269,14 @@ term:
 }
 
 
-static void _UpdateWavePTV( pxtnVOICEUNIT* p_vc, pxtnVOICEINSTANCE* p_vi, int32_t  ch, int32_t  sps, int32_t  bps )
+void pxtnWoice::_UpdateWavePTV( pxtnVOICEUNIT* p_vc, pxtnVOICEINSTANCE* p_vi, int32_t  ch, int32_t  sps, int32_t  bps )
 {
 	double  work, osc;
 	int32_t long_;
 	int32_t pan_volume[ 2 ] = {64, 64};
 	bool    b_ovt;
 
-	pxtnPulse_Oscillator osci;
+	pxtnPulse_Oscillator osci( _io_read, _io_write, _io_seek, _io_pos );
 
 	if( ch == 2 )
 	{
@@ -287,6 +289,8 @@ static void _UpdateWavePTV( pxtnVOICEUNIT* p_vc, pxtnVOICEINSTANCE* p_vi, int32_
 	if( p_vc->type == pxtnVOICE_Overtone ) b_ovt = true ;
 	else                                   b_ovt = false; 
 
+	p_vi->b_sine_over = false;
+
 	//  8bit
 	if( bps ==  8 )
 	{
@@ -298,8 +302,8 @@ static void _UpdateWavePTV( pxtnVOICEUNIT* p_vc, pxtnVOICEINSTANCE* p_vi, int32_
 			for( int32_t c = 0; c < ch; c++ )
 			{
 				work = osc * pan_volume[ c ] / 64;
-				if( work >  1.0 ) work =  1.0;
-				if( work < -1.0 ) work = -1.0;
+				if( work >  1.0 ){ work =  1.0; p_vi->b_sine_over = true; }
+				if( work < -1.0 ){ work = -1.0; p_vi->b_sine_over = true; }
 				long_  = (int32_t )( work * 127 );
 				p[ s * ch + c ] = (uint8_t)(long_ + 128);
 			}
@@ -317,8 +321,8 @@ static void _UpdateWavePTV( pxtnVOICEUNIT* p_vc, pxtnVOICEINSTANCE* p_vi, int32_
 			for( int32_t c = 0; c < ch; c++ )
 			{
 				work = osc * pan_volume[ c ] / 64;
-				if( work >  1.0 ) work =  1.0;
-				if( work < -1.0 ) work = -1.0;
+				if( work >  1.0 ){ work =  1.0; p_vi->b_sine_over = true; }
+				if( work < -1.0 ){ work = -1.0; p_vi->b_sine_over = true; }
 				long_  = (int32_t )( work * 32767 );
 				p[ s * ch + c ] = (int16_t)long_;
 			}
@@ -331,7 +335,7 @@ pxtnERR pxtnWoice::Tone_Ready_sample( const pxtnPulse_NoiseBuilder *ptn_bldr )
 	pxtnERR            res   = pxtnERR_VOID;
 	pxtnVOICEINSTANCE* p_vi  = NULL ;
 	pxtnVOICEUNIT*     p_vc  = NULL ;
-	pxtnPulse_PCM      pcm_work;
+	pxtnPulse_PCM      pcm_work( _io_read, _io_write, _io_seek, _io_pos );
 
 	int32_t            ch    =     2;
 	int32_t            sps   = 44100;
@@ -370,8 +374,8 @@ pxtnERR pxtnWoice::Tone_Ready_sample( const pxtnPulse_NoiseBuilder *ptn_bldr )
 
 		case pxtnVOICE_Sampling:
 
-			res = p_vc->p_pcm->Copy( &pcm_work ); if( res != pxtnOK ) goto term;
-			if( !pcm_work.Convert( ch, sps, bps ) ){ res = pxtnERR_pcm_convert; goto term; }
+			if( !pcm_work.copy_from( p_vc->p_pcm  ) ){ res = pxtnERR_pcm_unknown; goto term; }
+			if( !pcm_work.Convert  ( ch, sps, bps ) ){ res = pxtnERR_pcm_convert; goto term; }
 			p_vi->smp_head_w = pcm_work.get_smp_head();
 			p_vi->smp_body_w = pcm_work.get_smp_body();
 			p_vi->smp_tail_w = pcm_work.get_smp_tail();
@@ -394,8 +398,9 @@ pxtnERR pxtnWoice::Tone_Ready_sample( const pxtnPulse_NoiseBuilder *ptn_bldr )
 				pxtnPulse_PCM *p_pcm = NULL;
 				if( !ptn_bldr ){ res = pxtnERR_ptn_init; goto term; }
 				if( !( p_pcm = ptn_bldr->BuildNoise( p_vc->p_ptn, ch, sps, bps ) ) ){ res = pxtnERR_ptn_build; goto term; }
-				p_vi->p_smp_w = (uint8_t*)p_pcm->Devolve_SamplingBuffer();
+				p_vi->p_smp_w    = (uint8_t*)p_pcm->Devolve_SamplingBuffer();
 				p_vi->smp_body_w = p_vc->p_ptn->get_smp_num_44k();
+				delete p_pcm;
 				break;
 			}
 		}

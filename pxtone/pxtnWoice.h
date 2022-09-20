@@ -3,9 +3,8 @@
 #ifndef pxtnWoice_H
 #define pxtnWoice_H
 
-#include "./pxtn.h"
+#include "./pxtnData.h"
 
-#include "./pxtnDescriptor.h"
 #include "./pxtnPulse_Noise.h"
 #include "./pxtnPulse_NoiseBuilder.h"
 #include "./pxtnPulse_PCM.h"
@@ -55,6 +54,8 @@ typedef struct
 	uint8_t* p_env      ;
 	int32_t  env_size   ;
 	int32_t  env_release;
+
+	bool     b_sine_over;
 }
 pxtnVOICEINSTANCE;
 
@@ -115,7 +116,7 @@ typedef struct
 pxtnVOICETONE;
 
 
-class pxtnWoice
+class pxtnWoice: public pxtnData
 {
 private:
 	void operator = (const pxtnWoice& src){}
@@ -133,8 +134,18 @@ private:
 	float              _x3x_tuning   ;
 	int32_t            _x3x_basic_key; // tuning old-fmt when key-event
 
+
+
+	bool    _Write_Wave    ( void* desc, const pxtnVOICEUNIT *p_vc, int32_t *p_total ) const;
+	bool    _Write_Envelope( void* desc, const pxtnVOICEUNIT *p_vc, int32_t *p_total ) const;
+	pxtnERR _Read_Wave     ( void* desc, pxtnVOICEUNIT *p_vc );
+	pxtnERR _Read_Envelope ( void* desc, pxtnVOICEUNIT *p_vc );
+
+	void    _UpdateWavePTV( pxtnVOICEUNIT* p_vc, pxtnVOICEINSTANCE* p_vi, int32_t  ch, int32_t  sps, int32_t  bps );
+
+
 public :
-	 pxtnWoice();
+	 pxtnWoice( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos );
 	~pxtnWoice();
 
 	int32_t              get_voice_num     () const;
@@ -155,23 +166,23 @@ public :
 	bool Copy( pxtnWoice *p_dst ) const;
 	void Slim();
 
-	pxtnERR read  ( pxtnDescriptor* desc, pxtnWOICETYPE type );
+	pxtnERR read  ( void* desc, pxtnWOICETYPE type );
 
-	bool    PTV_Write   ( pxtnDescriptor *p_doc, int32_t *p_total ) const;
-	pxtnERR PTV_Read    ( pxtnDescriptor *p_doc                   );
+	bool    PTV_Write    ( void* desc, int32_t *p_total ) const;
+	pxtnERR PTV_Read     ( void* desc                   );
 
-	bool    io_matePCM_w(  pxtnDescriptor* p_doc ) const;
-	pxtnERR io_matePCM_r(  pxtnDescriptor* p_doc );
+	bool    io_matePCM_w ( void* desc ) const;
+	pxtnERR io_matePCM_r ( void* desc );
 
-	bool    io_matePTN_w(  pxtnDescriptor* p_doc ) const;
-	pxtnERR io_matePTN_r(  pxtnDescriptor* p_doc );
+	bool    io_matePTN_w ( void* desc ) const;
+	pxtnERR io_matePTN_r ( void* desc );
 
-	bool    io_matePTV_w(  pxtnDescriptor* p_doc ) const;
-	pxtnERR io_matePTV_r(  pxtnDescriptor* p_doc );
+	bool    io_matePTV_w ( void* desc ) const;
+	pxtnERR io_matePTV_r ( void* desc );
 
 #ifdef  pxINCLUDE_OGGVORBIS
-	bool    io_mateOGGV_w( pxtnDescriptor *p_doc ) const;
-	pxtnERR io_mateOGGV_r( pxtnDescriptor *p_doc );
+	bool    io_mateOGGV_w( void* desc ) const;
+	pxtnERR io_mateOGGV_r( void* desc );
 #endif
 
 	pxtnERR Tone_Ready_sample  ( const pxtnPulse_NoiseBuilder *ptn_bldr  );

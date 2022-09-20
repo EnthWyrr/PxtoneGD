@@ -4,13 +4,14 @@
 
 #include "./pxtnText.h"
 
-static bool _read4_malloc( char **pp, int32_t* p_buf_size, pxtnDescriptor *p_doc )
+bool pxtnText::_read4_malloc( char **pp, int32_t* p_buf_size, void* desc )
 {
 	if( !pp ) return false;
-	if( !p_doc->r( p_buf_size, 4, 1 ) ) return false;
-	if( *p_buf_size < 0 ) return false;
 
-	bool  b_ret  = false;
+	if( !_io_read( desc, p_buf_size, 4, 1 ) ) return false;
+	if( *p_buf_size < 0                     ) return false;
+
+	bool b_ret  = false;
 
 	if( !( *pp = (char *)malloc( *p_buf_size + 1 ) ) ) return false;
 
@@ -18,7 +19,7 @@ static bool _read4_malloc( char **pp, int32_t* p_buf_size, pxtnDescriptor *p_doc
 
 	if( *p_buf_size )
 	{
-		if( !p_doc->r( *pp, sizeof(char), *p_buf_size ) ) goto term;
+		if( !_io_read( desc, *pp, sizeof(char), *p_buf_size ) ) goto term;
 	}
 
 	b_ret = true;
@@ -28,10 +29,10 @@ term:
 	return b_ret;
 }
 
-static bool _write4( const char *p, int32_t buf_size, pxtnDescriptor *p_doc )
+bool pxtnText::_write4( const char *p, int32_t buf_size, void* desc ) const
 {
-	if( !p_doc->w_asfile( &buf_size, 4,        1 ) ) return false;
-	if( !p_doc->w_asfile(  p,        1, buf_size ) ) return false;
+	if( !_io_write( desc, &buf_size, 4,        1 ) ) return false;
+	if( !_io_write( desc,  p,        1, buf_size ) ) return false;
 	return true;
 }
 
@@ -74,12 +75,14 @@ bool pxtnText::is_name_buf   () const{ if( _name_size    > 0 ) return true; retu
 bool pxtnText::is_comment_buf() const{ if( _comment_size > 0 ) return true; return false; }
 
 
-pxtnText::pxtnText()
+pxtnText::pxtnText( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos )
 {
-	_p_comment_buf = NULL;
-	_p_name_buf    = NULL;
-	_comment_size  =    0;
-	_name_size     =    0;
+	_set_io_funcs( io_read, io_write, io_seek, io_pos );
+
+	_p_comment_buf = NULL    ;
+	_p_name_buf    = NULL    ;
+	_comment_size  =        0;
+	_name_size     =        0;
 }
 
 pxtnText::~pxtnText()
@@ -89,24 +92,24 @@ pxtnText::~pxtnText()
 }
 
 
-bool pxtnText::Comment_w( pxtnDescriptor *p_doc )
+bool pxtnText::Comment_w( void* desc )
 {
 	if( !_p_comment_buf ) return false;
-	return _write4( _p_comment_buf, _comment_size, p_doc );
+	return _write4( _p_comment_buf, _comment_size, desc );
 }
 
-bool pxtnText::Name_w( pxtnDescriptor *p_doc )
+bool pxtnText::Name_w( void* desc )
 {
 	if( !_p_name_buf ) return false;
-	return _write4( _p_name_buf, _name_size, p_doc );
+	return _write4( _p_name_buf, _name_size, desc );
 }
 
-bool pxtnText::Comment_r( pxtnDescriptor* p_doc )
+bool pxtnText::Comment_r( void* desc )
 {
-	return _read4_malloc( &_p_comment_buf, &_comment_size, p_doc );
+	return _read4_malloc( &_p_comment_buf, &_comment_size, desc );
 }
 
-bool pxtnText::Name_r(  pxtnDescriptor* p_doc )
+bool pxtnText::Name_r(  void* desc )
 {
-	return _read4_malloc( &_p_name_buf, &_name_size, p_doc );
+	return _read4_malloc( &_p_name_buf, &_name_size, desc );
 }

@@ -3,11 +3,9 @@
 #ifndef pxtnMaster_H
 #define pxtnMaster_H
 
-#include "./pxtn.h"
+#include "./pxtnData.h"
 
-#include "./pxtnDescriptor.h"
-
-class pxtnMaster
+class pxtnMaster: public pxtnData
 {
 private:
 	void operator = (const pxtnMaster& src){}
@@ -22,7 +20,7 @@ private:
 	int32_t _volume_    ;
 
 public :
-	 pxtnMaster();
+	 pxtnMaster( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos );
 	~pxtnMaster();
 
 	void  Reset();
@@ -48,12 +46,12 @@ public :
 
 	int32_t get_this_clock( int32_t meas, int32_t beat, int32_t clock ) const;
 
-	bool    io_w_v5          ( pxtnDescriptor *p_doc, int32_t rough ) const;
-	pxtnERR io_r_v5          ( pxtnDescriptor *p_doc );
-	int32_t io_r_v5_EventNum ( pxtnDescriptor *p_doc );
+	bool    io_w_v5          ( void* desc, int32_t rough ) const;
+	pxtnERR io_r_v5          ( void* desc );
+	int32_t io_r_v5_EventNum ( void* desc );
 
-	pxtnERR io_r_x4x         ( pxtnDescriptor *p_doc );
-	int32_t io_r_x4x_EventNum( pxtnDescriptor *p_doc );
+	pxtnERR io_r_x4x         ( void* desc );
+	int32_t io_r_x4x_EventNum( void* desc );
 };
 
 #endif

@@ -1,11 +1,11 @@
 ﻿#ifndef pxtnPulse_NoiseBuilder_H
 #define pxtnPulse_NoiseBuilder_H
 
-#include "./pxtn.h"
+#include "./pxtnData.h"
 
 #include "./pxtnPulse_Noise.h"
 
-class pxtnPulse_NoiseBuilder
+class pxtnPulse_NoiseBuilder: public pxtnData
 {
 private:
 	void operator =       (const pxtnPulse_NoiseBuilder& src){}
@@ -22,7 +22,7 @@ private:
 
 public :
 
-	 pxtnPulse_NoiseBuilder();
+	 pxtnPulse_NoiseBuilder( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos );
 	~pxtnPulse_NoiseBuilder();
 
 	bool Init();

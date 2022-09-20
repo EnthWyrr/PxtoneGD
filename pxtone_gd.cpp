@@ -16,9 +16,52 @@ Released under the MIT License
 #include "core/math/math_funcs.h"
 #include "core/print_string.h"
 #include "core/os/file_access.h"
+#include <iostream>
 
+// I/O Callbacks
+static bool pxtn_read(void* user, void* destination, int32_t size, int32_t num) {
+	FileAccess* file_to_read_from = (FileAccess*)user;
+	int desc_size = size * num;
+	void* desc = memalloc(desc_size);
+	file_to_read_from->get_buffer((uint8_t*)desc, desc_size);
+	memcpy(destination,desc,desc_size);
+	memfree(desc);
+	return true;
+}
+
+static bool pxtn_seek(void* user, int mode, int size)
+{
+	FileAccess* file_to_seek_from = (FileAccess*)user;
+	int file_size = file_to_seek_from->get_len();
+	switch (mode)
+	{
+		case 0:	// SEEK_SET
+			file_to_seek_from->seek(size);
+			break;
+		case 1:	// SEEK_CUR
+			file_to_seek_from->seek(file_to_seek_from->get_position() + size);
+			break;
+		case 2:	// SEEK_END
+			file_to_seek_from->seek_end(size);
+			break;
+		default:
+			break;
+	}
+	return true;
+}
+
+static bool pxtn_pos(void* user, int32_t* p_pos)
+{
+	FileAccess* file_to_get_pos_from = (FileAccess*)user;
+	int file_pos = file_to_get_pos_from->get_position();
+	if (file_pos < 0) return false;
+	*p_pos = file_pos;
+	return true;
+}
+
+// Class methods begin here
 PxtoneGD::PxtoneGD() {
-	pxtn = memnew(pxtnService);
+	pxtn = memnew(pxtnService(pxtn_read, NULL, pxtn_seek, pxtn_pos));
 	playing = false;
 	looping = true;
 	volume = 1;
@@ -109,42 +152,36 @@ void PxtoneGD::_mix_audio() {
 
 Error PxtoneGD::load_tune(const String file_path) {
 	Error load_error = OK;
-	pxtnDescriptor desc;
-	pxtnERR pxtn_error;
+	pxtnERR pxtn_err = pxtnERR_VOID;
 	stop();
 	pxtn->tones_clear();
+	// Ensure that the file can be loaded
 	FileAccess *tune_file = FileAccess::open(file_path, FileAccess::READ, &load_error);
-	if (load_error != OK) {
+	if (load_error != OK)
+	{
 		goto finish;
 	}
-	else {
-		size_t file_len = tune_file->get_len();
-		Vector<uint8_t> file_buffer;
-		file_buffer.resize(file_len);
-		tune_file->get_buffer(file_buffer.ptrw(), file_len);
-		if (file_len <= 0) { // Invalid length.
-			load_error = ERR_FILE_CORRUPT;
-			goto finish;
-		}
-		if (!desc.set_memory_r(file_buffer.ptrw(),file_len)) {
-			load_error = ERR_INVALID_DATA;
-			goto finish;
-		}
-		pxtn_error = pxtn->read(&desc);
-		if (pxtn_error != pxtnOK) {
-			load_error = FAILED;	// Should I use another error code?
-			print_error("Pxtone error: " + String(pxtnError_get_string(pxtn_error)));
-			goto finish;
-		}
-		pxtn_error = pxtn->tones_ready();
-		if (pxtn_error != pxtnOK) {
+	else
+	{
+		pxtn_err = pxtn->read(tune_file);
+		if (pxtn_err != pxtnOK)
+		{
 			load_error = FAILED;
-			print_error("Pxtone error: " + String(pxtnError_get_string(pxtn_error)));
+			ERR_PRINT("PxTone Error: " + String(pxtnError_get_string(pxtn_err)));
 			goto finish;
 		}
+		pxtn_err = pxtn->tones_ready();
+		if (pxtn_err != pxtnOK)
+		{
+			load_error = FAILED;
+			ERR_PRINT("PxTone Error: " + String(pxtnError_get_string(pxtn_err)));
+			goto finish;
+		}
+
 	}
 finish:
-	if (tune_file) {
+	if (tune_file)
+	{
 		memdelete(tune_file);
 	}
 	return load_error;
@@ -214,14 +251,12 @@ void PxtoneGD::fadeout_tune(const float secs) {
 // Taken from AudioStreamPlayer (audio_stream_player.cpp)
 
 void PxtoneGD::set_bus(const StringName &p_bus) {
-
 	//if audio is active, must lock this
 	AudioServer::get_singleton()->lock();
 	bus = p_bus;
 	AudioServer::get_singleton()->unlock();
 }
 StringName PxtoneGD::get_bus() const {
-
 	for (int i = 0; i < AudioServer::get_singleton()->get_bus_count(); i++) {
 		if (AudioServer::get_singleton()->get_bus_name(i) == bus) {
 			return bus;
@@ -231,7 +266,6 @@ StringName PxtoneGD::get_bus() const {
 }
 
 void PxtoneGD::_validate_property(PropertyInfo &property) const {
-
 	if (property.name == "bus") {
 
 		String options;

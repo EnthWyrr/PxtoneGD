@@ -3,8 +3,10 @@
 
 #include "./pxtnPulse_Oscillator.h"
 
-pxtnPulse_Oscillator::pxtnPulse_Oscillator()
+pxtnPulse_Oscillator::pxtnPulse_Oscillator( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos )
 {
+	_set_io_funcs( io_read, io_write, io_seek, io_pos );
+
 	_volume      =    0;
 	_p_point     = NULL;
 	_sample_num  =    0;

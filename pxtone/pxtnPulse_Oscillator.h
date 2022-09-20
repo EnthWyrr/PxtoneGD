@@ -1,9 +1,9 @@
 ﻿#ifndef pxtnPulse_Oscillator_H
 #define pxtnPulse_Oscillator_H
 
-#include "./pxtn.h"
+#include "./pxtnData.h"
 
-class pxtnPulse_Oscillator
+class pxtnPulse_Oscillator: public pxtnData
 {
 private:
 	void operator =     (const pxtnPulse_Oscillator& src){}
@@ -17,7 +17,7 @@ private:
 
 public:
 
-	pxtnPulse_Oscillator();
+	pxtnPulse_Oscillator( pxtnIO_r io_read, pxtnIO_w io_write, pxtnIO_seek io_seek, pxtnIO_pos io_pos );
 
 	void   ReadyGetSample( pxtnPOINT *p_point, int32_t point_num, int32_t volume, int32_t sample_num, int32_t point_reso );
 	double GetOneSample_Overtone ( int32_t index );
