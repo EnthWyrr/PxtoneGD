@@ -22,7 +22,7 @@ static bool pxtn_read(void* user, void* destination, int32_t size, int32_t num) 
 	FileAccess* file_to_read_from = (FileAccess*)user;
 	int desc_size = size * num;
 	void* desc = memalloc(desc_size);
-	file_to_read_from->get_buffer((uint8_t*)desc, desc_size);
+	if (file_to_read_from->get_buffer((uint8_t*)desc, desc_size) < num) { memfree(desc); return false; }
 	memcpy(destination,desc,desc_size);
 	memfree(desc);
 	return true;
