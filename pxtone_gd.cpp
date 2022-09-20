@@ -16,7 +16,6 @@ Released under the MIT License
 #include "core/math/math_funcs.h"
 #include "core/print_string.h"
 #include "core/os/file_access.h"
-#include <iostream>
 
 // I/O Callbacks
 static bool pxtn_read(void* user, void* destination, int32_t size, int32_t num) {
