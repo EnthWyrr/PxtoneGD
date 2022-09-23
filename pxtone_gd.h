@@ -2,7 +2,7 @@
 ---------------------
 PxtoneGD
 Pxtone playback for Godot Engine
-Module by GFXKazos
+Module by EnthWyrr
 Pxtone by Studio Pixel
 
 Released under the MIT License
