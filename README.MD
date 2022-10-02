@@ -14,7 +14,7 @@ To use this module, simply clone the repository inside of the `modules` subfolde
 
 ```
 cd godot/modules
-git clone https://github.com/GFXKazos/PxtoneGD.git pxtone
+git clone https://github.com/EnthWyrr/PxtoneGD.git pxtone
 ```
 
 And then compile the engine.
