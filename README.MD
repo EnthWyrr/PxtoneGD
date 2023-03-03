@@ -10,14 +10,14 @@ You can use [pxtone Collage](https://pxtone.org/downloads/ "pxtone Collage") to 
 
 ## Usage
 
-To use this module, simply clone the repository inside of the `modules` subfolder:
+To use this module, simply clone the repository:
 
 ```
-cd godot/modules
 git clone https://github.com/EnthWyrr/PxtoneGD.git pxtone
 ```
 
-And then compile the engine.
+And then compile the engine with the module using one of the ways described in the [official documentation.](https://docs.godotengine.org/en/latest/contributing/development/core_and_modules/custom_modules_in_cpp.html)\
+Make sure the directory that it gets cloned into is named `pxtone`, or else it won't compile.
 
 ## Tested platforms
 
