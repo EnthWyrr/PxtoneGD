@@ -12,7 +12,6 @@ Released under the MIT License
 #ifndef PXTONE_GD_H
 #define PXTONE_GD_H
 
-#include "core/reference.h"
 #include "scene/main/node.h"
 #include "core/math/audio_frame.h"
 #include "pxtone/pxtnService.h"
