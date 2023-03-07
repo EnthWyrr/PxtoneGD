@@ -16,7 +16,7 @@ To use this module, simply clone the repository:
 git clone https://github.com/EnthWyrr/PxtoneGD.git pxtone
 ```
 
-And then compile the engine with the module using one of the ways described in the [official documentation.](https://docs.godotengine.org/en/stable/contributing/development/core_and_modules/custom_modules_in_cpp.html)\
+And then compile the engine with the module using one of the ways described in the [official documentation.](https://docs.godotengine.org/en/3.5/development/cpp/custom_modules_in_cpp.html)\
 Make sure the directory that it gets cloned into is named `pxtone`, or else it won't compile.
 
 ## Tested platforms
