@@ -1,12 +1,14 @@
 /*
 ---------------------
 Pxtone playback for Godot Engine
-Module by GFXKazos
+Module by EnthWyrr
 Pxtone by Studio Pixel
 
 Released under the MIT License
 ---------------------
 */
 
-void register_pxtone_types();
-void unregister_pxtone_types();
+#include "modules/register_module_types.h"
+
+void initialize_pxtone_module(ModuleInitializationLevel p_level);
+void uninitialize_pxtone_module(ModuleInitializationLevel p_level);
